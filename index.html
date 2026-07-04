@@ -69,6 +69,10 @@ main{max-width:1060px;margin:0 auto;padding:24px 16px 80px}
 .btn-dark{background:var(--ink);color:#fff;padding:10px 16px;font-size:14px}
 .hint{font-size:13px;color:var(--muted);text-align:center;margin-top:12px}
 .hint a{cursor:pointer}
+.sug{position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid var(--line);border-radius:0 0 8px 8px;box-shadow:var(--shadow);z-index:20;display:none;max-height:220px;overflow:auto}
+.sug.on{display:block}
+.sug div{padding:10px 14px;font-size:14px;cursor:pointer;border-bottom:1px solid #F0F4F5}
+.sug div:hover,.sug div.hl{background:#FBEFD9}
 
 /* ---------- Progress ---------- */
 .progress{max-width:640px;margin:18px auto 0;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 22px;display:none}
@@ -205,7 +209,12 @@ main{max-width:1060px;margin:0 auto;padding:24px 16px 80px}
   <div class="scan-card">
     <div class="field"><label for="inName">Business name</label><input id="inName" placeholder="Diamond Construction LLC" autocomplete="off"></div>
     <div class="field"><label for="inLoc">City / State</label><input id="inLoc" placeholder="Kent, WA" autocomplete="off"></div>
-    <div class="field"><label for="inSite">Website (optional)</label><input id="inSite" placeholder="https://..." autocomplete="off"></div>
+    <div class="field" style="position:relative">
+      <label for="inAddr">Address (optional — start typing, pick the correct one)</label>
+      <input id="inAddr" placeholder="13210 109th Ave SE, Kent, WA 98030" autocomplete="off">
+      <div id="addrSug" class="sug"></div>
+    </div>
+    <div class="field"><label for="inUbi">UBI number (optional — exact match on WA state records)</label><input id="inUbi" placeholder="604 123 456" autocomplete="off"></div>
     <button class="btn btn-primary" id="scanBtn" onclick="runScan()">Run radar scan</button>
     <p class="hint" id="setupHint" style="display:none">Backend not configured yet — <a onclick="showTab('settings')">add your Worker URL in Setup</a> first.</p>
   </div>
@@ -315,7 +324,8 @@ async function api(path, opts){
 async function runScan(){
   const name=document.getElementById('inName').value.trim();
   const loc=document.getElementById('inLoc').value.trim() || S.defLoc;
-  const site=document.getElementById('inSite').value.trim();
+  const addr=document.getElementById('inAddr').value.trim();
+  const ubi=document.getElementById('inUbi').value.trim();
   if(!S.worker){ document.getElementById('setupHint').style.display='block'; return; }
   if(!name||!loc){ toast('Enter business name and location'); return; }
 
@@ -325,19 +335,19 @@ async function runScan(){
   [1,2,3].forEach(n=>step(n,null)); step(1,'doing');
 
   try{
-    const r = await api('/research',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,location:loc,website:site||undefined})});
+    const r = await api('/research',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,location:loc,address:addr||undefined,ubi:ubi||undefined})});
     step(1,'done'); step(2,'doing');
 
     const profile=r.profile||{};
     let whois=null;
-    const domain = site || profile.website;
+    const domain = profile.website;
     if(domain){ try{ whois = await api('/whois?domain='+encodeURIComponent(domain)); }catch(e){} }
     step(2,'done'); step(3,'doing');
 
     const a = await api('/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:{...profile, whois}})});
     step(3,'done');
 
-    current = { profile, whois, sources:r.sources||[], analysis:a.analysis||{}, query:{name,location:loc,website:site} };
+    current = { profile, whois, sources:r.sources||[], analysis:a.analysis||{}, query:{name,location:loc,address:addr,ubi} };
     renderDossier(current, false);
     setTimeout(()=>prog.classList.remove('on'), 600);
   }catch(e){
@@ -408,7 +418,7 @@ function renderDossier(d, saved){
   <div class="dossier-head">
     <div>
       <div class="dh-name">${esc(p.business_name||q.name)}</div>
-      <div class="dh-sub">${esc(p.address||q.location)} · Scanned ${new Date().toLocaleDateString()}</div>
+      <div class="dh-sub">${esc(p.address||q.location)} · Scanned ${new Date().toLocaleDateString()}${p.confidence?' · <span class="pill '+(p.confidence==='high'?'ok':(p.confidence==='low'?'no':'mid'))+'">'+esc(p.confidence)+' confidence</span>':''}</div>
     </div>
     <div class="dh-actions">
       ${saved?'':'<button class="btn btn-primary" style="width:auto;padding:10px 18px" onclick="saveLead()">Save lead</button>'}
@@ -458,6 +468,14 @@ function renderDossier(d, saved){
         ${sr.found?kv('Agent', esc(sr.registered_agent)):''}
         ${kv('In business', p.years_in_business!=null?esc(p.years_in_business)+' years':null)}
       </div></div>
+
+      ${(p.fmcsa&&p.fmcsa.found)?`<div class="sec"><span class="sec-tab">FMCSA / Trucking</span><div class="sec-body">
+        ${kv('DOT #','<span class="mono">'+esc(p.fmcsa.dot_number||'—')+'</span>')}
+        ${kv('MC #','<span class="mono">'+esc(p.fmcsa.mc_number||'—')+'</span>')}
+        ${kv('Status', esc(p.fmcsa.operating_status))}
+        ${kv('Power units', esc(p.fmcsa.power_units))}
+        ${kv('Drivers', esc(p.fmcsa.drivers))}
+      </div></div>`:''}
 
       <div class="sec"><span class="sec-tab">Notes</span><div class="sec-body" style="font-size:14px">${esc(p.notes||'—')}</div></div>
 
@@ -613,6 +631,43 @@ async function testWorker(){
     const r=await fetch(url+'/health'); const d=await r.json();
     msg.innerHTML = d.ok ? '<div class="ok-msg">✓ Connected to LeadRadar Worker.</div>' : '<div class="err-msg">Reached the URL but it doesn\'t look like the LeadRadar Worker.</div>';
   }catch(e){ msg.innerHTML='<div class="err-msg">Could not reach that URL. Check it\'s deployed and CORS is allowed.</div>'; }
+}
+
+/* ================= Address autocomplete (free, no key — OpenStreetMap/Photon) ================= */
+const addrIn=document.getElementById('inAddr'), sug=document.getElementById('addrSug');
+let acTimer=null, acAbort=null;
+addrIn.addEventListener('input',()=>{
+  clearTimeout(acTimer);
+  const q=addrIn.value.trim();
+  if(q.length<4){ sug.classList.remove('on'); return; }
+  acTimer=setTimeout(async()=>{
+    try{
+      if(acAbort) acAbort.abort();
+      acAbort=new AbortController();
+      const res=await fetch('https://photon.komoot.io/api/?limit=6&lang=en&q='+encodeURIComponent(q),{signal:acAbort.signal});
+      const data=await res.json();
+      const items=(data.features||[]).filter(f=>f.properties&&f.properties.countrycode==='US').map(f=>{
+        const p=f.properties;
+        const line1=[p.housenumber&&p.street?(p.housenumber+' '+p.street):(p.street||p.name)].filter(Boolean).join('');
+        const full=[line1,p.city||p.county,(p.state?stateAbbr(p.state):'')+(p.postcode?' '+p.postcode:'')].filter(Boolean).join(', ');
+        return {full, city:p.city||p.county||'', state:stateAbbr(p.state||'')};
+      }).filter(x=>x.full);
+      if(!items.length){ sug.classList.remove('on'); return; }
+      sug.innerHTML=items.map((x,i)=>'<div data-i="'+i+'">'+esc(x.full)+'</div>').join('');
+      sug.classList.add('on');
+      sug.querySelectorAll('div').forEach(el=>el.onclick=()=>{
+        const it=items[+el.dataset.i];
+        addrIn.value=it.full;
+        if(it.city) document.getElementById('inLoc').value=(it.city+(it.state?', '+it.state:''));
+        sug.classList.remove('on');
+      });
+    }catch(e){}
+  },300);
+});
+document.addEventListener('click',e=>{ if(!sug.contains(e.target)&&e.target!==addrIn) sug.classList.remove('on'); });
+function stateAbbr(s){
+  const m={'Washington':'WA','Oregon':'OR','California':'CA','Idaho':'ID','Texas':'TX','Florida':'FL','New York':'NY','Arizona':'AZ','Nevada':'NV','Colorado':'CO','Utah':'UT','Georgia':'GA','Illinois':'IL','Ohio':'OH','Pennsylvania':'PA','North Carolina':'NC','Michigan':'MI','New Jersey':'NJ','Virginia':'VA','Tennessee':'TN','Massachusetts':'MA','Indiana':'IN','Missouri':'MO','Maryland':'MD','Wisconsin':'WI','Minnesota':'MN','South Carolina':'SC','Alabama':'AL','Louisiana':'LA','Kentucky':'KY','Oklahoma':'OK','Connecticut':'CT','Iowa':'IA','Mississippi':'MS','Arkansas':'AR','Kansas':'KS','New Mexico':'NM','Nebraska':'NE','West Virginia':'WV','Hawaii':'HI','New Hampshire':'NH','Maine':'ME','Montana':'MT','Rhode Island':'RI','Delaware':'DE','South Dakota':'SD','North Dakota':'ND','Alaska':'AK','Vermont':'VT','Wyoming':'WY'};
+  return m[s]||s;
 }
 
 /* ================= Init ================= */
