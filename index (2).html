@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>LeadRadar AI — Zapic Digital US</title>
+<meta name="description" content="Enter a business name and location. Get a full intelligence dossier, lead score, and ready-to-send outreach.">
+<meta name="theme-color" content="#101B22">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23101B22'/><circle cx='50' cy='50' r='30' fill='none' stroke='%23E8930C' stroke-width='4'/><circle cx='50' cy='50' r='14' fill='none' stroke='%23E8930C' stroke-width='4'/><circle cx='66' cy='38' r='6' fill='%23E8930C'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
+<style>
+:root{
+  --ink:#101B22;
+  --ink-2:#2A3B45;
+  --mist:#EDF1F2;
+  --card:#FFFFFF;
+  --line:#D8E0E2;
+  --signal:#E8930C;
+  --signal-dark:#B96F00;
+  --petrol:#14555A;
+  --good:#1E7A46;
+  --bad:#B3372B;
+  --muted:#65757D;
+  --radius:10px;
+  --shadow:0 1px 2px rgba(16,27,34,.06),0 4px 14px rgba(16,27,34,.07);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:'Barlow',system-ui,sans-serif;background:var(--mist);color:var(--ink);font-size:16px;line-height:1.5;min-height:100vh}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:16px}
+a{color:var(--petrol)}
+.mono{font-family:'IBM Plex Mono',monospace}
+.cond{font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.06em}
+
+/* ---------- Header ---------- */
+header{background:var(--ink);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:50}
+.logo{width:34px;height:34px;flex:none}
+.brand h1{font-family:'Barlow Condensed';font-size:22px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;line-height:1}
+.brand span{font-size:11px;color:#9FB2BA;letter-spacing:.14em;text-transform:uppercase}
+nav{margin-left:auto;display:flex;gap:4px}
+nav button{background:transparent;border:1px solid transparent;color:#B9C7CD;padding:8px 14px;border-radius:8px;font-family:'Barlow Condensed';font-size:15px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+nav button.active{color:#fff;border-color:var(--signal);background:rgba(232,147,12,.12)}
+nav button:hover{color:#fff}
+
+main{max-width:1060px;margin:0 auto;padding:24px 16px 80px}
+.tab{display:none}
+.tab.active{display:block}
+
+/* ---------- Scan form ---------- */
+.scan-hero{text-align:center;margin:26px 0 22px}
+.scan-hero h2{font-family:'Barlow Condensed';font-size:34px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.scan-hero p{color:var(--muted);max-width:520px;margin:6px auto 0}
+.scan-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;max-width:640px;margin:0 auto}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.field input,.field select,.field textarea{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:#FBFCFC}
+.field input:focus,.field textarea:focus,.field select:focus{outline:2px solid var(--signal);outline-offset:1px;border-color:var(--signal)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:8px;padding:13px 22px;font-weight:600;font-size:15px}
+.btn-primary{background:var(--signal);color:#1B1204;width:100%}
+.btn-primary:hover{background:#F5A226}
+.btn-primary:disabled{background:#E5D3B4;cursor:default}
+.btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink-2);padding:9px 14px;font-size:14px}
+.btn-ghost:hover{border-color:var(--ink-2)}
+.btn-dark{background:var(--ink);color:#fff;padding:10px 16px;font-size:14px}
+.hint{font-size:13px;color:var(--muted);text-align:center;margin-top:12px}
+.hint a{cursor:pointer}
+
+/* ---------- Progress ---------- */
+.progress{max-width:640px;margin:18px auto 0;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 22px;display:none}
+.progress.on{display:block}
+.pstep{display:flex;align-items:center;gap:10px;padding:7px 0;color:var(--muted);font-size:15px}
+.pstep .dot{width:10px;height:10px;border-radius:50%;background:var(--line);flex:none}
+.pstep.doing{color:var(--ink)}
+.pstep.doing .dot{background:var(--signal);animation:pulse 1s infinite}
+.pstep.done{color:var(--good)}
+.pstep.done .dot{background:var(--good)}
+@keyframes pulse{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.pstep.doing .dot{animation:none}}
+
+/* ---------- Dossier ---------- */
+.dossier{margin-top:26px;display:none}
+.dossier.on{display:block}
+.dossier-head{background:var(--ink);color:#fff;border-radius:var(--radius) var(--radius) 0 0;padding:20px 22px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;position:relative;overflow:hidden}
+.dossier-head::after{content:"";position:absolute;right:-40px;top:-40px;width:200px;height:200px;border:1px solid rgba(232,147,12,.25);border-radius:50%}
+.dossier-head::before{content:"";position:absolute;right:10px;top:10px;width:100px;height:100px;border:1px solid rgba(232,147,12,.25);border-radius:50%}
+.dh-name{font-family:'Barlow Condensed';font-size:28px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;line-height:1.1}
+.dh-sub{color:#9FB2BA;font-size:14px;margin-top:2px}
+.dh-actions{margin-left:auto;display:flex;gap:8px;z-index:1}
+.dossier-body{background:var(--card);border:1px solid var(--line);border-top:none;border-radius:0 0 var(--radius) var(--radius);box-shadow:var(--shadow)}
+.dgrid{display:grid;grid-template-columns:1fr 340px;gap:0}
+@media(max-width:860px){.dgrid{grid-template-columns:1fr}}
+.dleft{padding:8px 22px 22px;border-right:1px solid var(--line)}
+@media(max-width:860px){.dleft{border-right:none;border-bottom:1px solid var(--line)}}
+.dright{padding:8px 22px 22px;background:#F7FAFA;border-radius:0 0 var(--radius) 0}
+
+.sec{margin-top:20px}
+.sec-tab{display:inline-block;background:var(--ink);color:#fff;font-family:'Barlow Condensed';font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;padding:4px 12px;border-radius:4px 4px 0 0}
+.sec-body{border:1px solid var(--line);border-radius:0 8px 8px 8px;padding:14px 16px;background:#fff}
+.kv{display:flex;gap:10px;padding:5px 0;font-size:15px;align-items:baseline}
+.kv b{flex:none;width:120px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.kv span,.kv a{word-break:break-word}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:600;letter-spacing:.04em}
+.pill.ok{background:#E2F2E8;color:var(--good)}
+.pill.no{background:#F7E4E1;color:var(--bad)}
+.pill.mid{background:#FBEFD9;color:var(--signal-dark)}
+.socgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:520px){.socgrid{grid-template-columns:1fr}}
+.soc{border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14px}
+.soc b{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.linkrow{display:flex;flex-wrap:wrap;gap:8px}
+.linkrow a{font-size:13px;border:1px solid var(--line);border-radius:99px;padding:5px 12px;text-decoration:none;background:#fff;color:var(--petrol)}
+.linkrow a:hover{border-color:var(--petrol)}
+.sources li{font-size:13px;margin:4px 0 4px 18px;word-break:break-all}
+
+/* ---------- Score dial + analysis ---------- */
+.dial-wrap{text-align:center;margin-top:20px}
+.dial{width:180px;height:180px;margin:0 auto;position:relative}
+.dial svg{transform:rotate(-90deg)}
+.dial .num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.dial .num b{font-family:'IBM Plex Mono';font-size:42px;font-weight:600;line-height:1}
+.dial .num i{font-style:normal;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.stamp{display:inline-block;margin-top:10px;border:3px solid;border-radius:6px;padding:4px 16px;font-family:'Barlow Condensed';font-size:20px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;transform:rotate(-3deg)}
+.stamp.hi{color:var(--good);border-color:var(--good)}
+.stamp.md{color:var(--signal-dark);border-color:var(--signal-dark)}
+.stamp.lo{color:var(--bad);border-color:var(--bad)}
+.bars{margin-top:18px}
+.bar{margin:9px 0}
+.bar .lbl{display:flex;justify-content:space-between;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.bar .lbl .mono{color:var(--ink)}
+.bar .track{height:7px;background:#E3EAEB;border-radius:99px;overflow:hidden}
+.bar .fill{height:100%;background:var(--petrol);border-radius:99px}
+.reco{margin-top:8px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.reco:last-child{border:none}
+.reco b{color:var(--petrol)}
+.copybox{background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px;font-size:14px;white-space:pre-wrap;margin-top:8px;max-height:260px;overflow:auto}
+.copyrow{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.why{font-size:14px;color:var(--ink-2);margin-top:14px;background:#fff;border-left:3px solid var(--signal);padding:10px 12px;border-radius:0 8px 8px 0}
+
+/* ---------- Leads (CRM) ---------- */
+.crm-top{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.crm-top input{flex:1;min-width:200px;padding:11px 14px;border:1px solid var(--line);border-radius:8px}
+.crm-top select{padding:11px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.lead-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;margin-bottom:12px}
+.lead-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.lead-row .nm{font-weight:700;font-size:17px}
+.lead-row .loc{color:var(--muted);font-size:14px}
+.lead-row .score-chip{margin-left:auto;font-family:'IBM Plex Mono';font-weight:600;font-size:14px;border-radius:8px;padding:4px 10px;background:var(--ink);color:#fff}
+.lead-meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.lead-meta select{padding:7px 10px;border-radius:8px;border:1px solid var(--line);font-size:14px;background:#fff}
+.lead-meta .contact{font-size:14px}
+.lead-notes{width:100%;margin-top:10px;border:1px solid var(--line);border-radius:8px;padding:9px 12px;min-height:38px;font-size:14px;resize:vertical}
+.status-New{border-left:5px solid #7A8A92}
+.status-Called{border-left:5px solid #4C7FB0}
+.status-Interested{border-left:5px solid var(--signal)}
+.status-NotInterested{border-left:5px solid var(--bad)}
+.status-Appointment{border-left:5px solid #7B5EA7}
+.status-ProposalSent{border-left:5px solid #1F8FA0}
+.status-Client{border-left:5px solid var(--good)}
+.empty{color:var(--muted);text-align:center;padding:60px 20px}
+.empty b{display:block;font-family:'Barlow Condensed';font-size:22px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);margin-bottom:6px}
+
+/* ---------- Settings ---------- */
+.set-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;max-width:640px;margin:0 auto 16px}
+.set-card h3{font-family:'Barlow Condensed';font-size:19px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px}
+.set-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.ok-msg{color:var(--good);font-size:14px;margin-top:8px}
+.err-msg{color:var(--bad);font-size:14px;margin-top:8px}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 20px;border-radius:99px;font-size:14px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .25s;z-index:99}
+.toast.on{opacity:1}
+@media print{
+  header,nav,.dh-actions,.scan-card,.scan-hero,.progress,.hint,.copyrow{display:none!important}
+  body{background:#fff}
+  .dossier{display:block!important}
+  .dossier-head{border-radius:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <svg class="logo" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#101B22" stroke="#2A3B45"/><circle cx="50" cy="50" r="30" fill="none" stroke="#E8930C" stroke-width="4"/><circle cx="50" cy="50" r="14" fill="none" stroke="#E8930C" stroke-width="4"/><circle cx="66" cy="38" r="6" fill="#E8930C"/></svg>
+  <div class="brand"><h1>LeadRadar AI</h1><span>Zapic Digital US</span></div>
+  <nav>
+    <button id="nav-scan" class="active" onclick="showTab('scan')">Scan</button>
+    <button id="nav-leads" onclick="showTab('leads')">Leads <span id="leadCount" class="mono"></span></button>
+    <button id="nav-settings" onclick="showTab('settings')">Setup</button>
+  </nav>
+</header>
+
+<main>
+
+<!-- ================= SCAN ================= -->
+<section id="tab-scan" class="tab active">
+  <div class="scan-hero">
+    <h2>One name in. Full dossier out.</h2>
+    <p>Enter a business name and location. LeadRadar searches the public web, government registries, and social platforms, then scores the lead and writes your outreach.</p>
+  </div>
+
+  <div class="scan-card">
+    <div class="field"><label for="inName">Business name</label><input id="inName" placeholder="Diamond Construction LLC" autocomplete="off"></div>
+    <div class="field"><label for="inLoc">City / State</label><input id="inLoc" placeholder="Kent, WA" autocomplete="off"></div>
+    <div class="field"><label for="inSite">Website (optional)</label><input id="inSite" placeholder="https://..." autocomplete="off"></div>
+    <button class="btn btn-primary" id="scanBtn" onclick="runScan()">Run radar scan</button>
+    <p class="hint" id="setupHint" style="display:none">Backend not configured yet — <a onclick="showTab('settings')">add your Worker URL in Setup</a> first.</p>
+  </div>
+
+  <div class="progress" id="progress">
+    <div class="pstep" id="ps1"><span class="dot"></span>Researching public web, Google, socials & state registries…</div>
+    <div class="pstep" id="ps2"><span class="dot"></span>Checking domain records (WHOIS)…</div>
+    <div class="pstep" id="ps3"><span class="dot"></span>Scoring the lead & writing your outreach…</div>
+  </div>
+
+  <div class="dossier" id="dossier"></div>
+</section>
+
+<!-- ================= LEADS ================= -->
+<section id="tab-leads" class="tab">
+  <div class="crm-top">
+    <input id="crmSearch" placeholder="Search leads…" oninput="renderLeads()">
+    <select id="crmStatus" onchange="renderLeads()">
+      <option value="">All statuses</option>
+      <option>New</option><option>Called</option><option>Interested</option>
+      <option>Not Interested</option><option>Appointment</option>
+      <option>Proposal Sent</option><option>Client</option>
+    </select>
+    <button class="btn btn-ghost" onclick="exportCSV()">Export CSV</button>
+    <button class="btn btn-ghost" onclick="exportJSON()">Backup JSON</button>
+  </div>
+  <div id="leadList"></div>
+</section>
+
+<!-- ================= SETTINGS ================= -->
+<section id="tab-settings" class="tab">
+  <div class="set-card">
+    <h3>Backend connection</h3>
+    <div class="field"><label for="setWorker">Cloudflare Worker URL</label><input id="setWorker" placeholder="https://leadradar.yourname.workers.dev"></div>
+    <div class="set-actions">
+      <button class="btn btn-dark" onclick="saveSettings()">Save</button>
+      <button class="btn btn-ghost" onclick="testWorker()">Test connection</button>
+    </div>
+    <div id="setMsg"></div>
+  </div>
+  <div class="set-card">
+    <h3>Defaults</h3>
+    <div class="field"><label for="setLoc">Default location</label><input id="setLoc" placeholder="Kent, WA"></div>
+    <div class="set-actions"><button class="btn btn-dark" onclick="saveSettings()">Save</button></div>
+  </div>
+  <div class="set-card">
+    <h3>Data</h3>
+    <p style="font-size:14px;color:var(--muted);margin-bottom:10px">All leads live in this browser (IndexedDB). Back up regularly.</p>
+    <div class="set-actions">
+      <button class="btn btn-ghost" onclick="exportJSON()">Export backup</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('importFile').click()">Import backup</button>
+      <button class="btn btn-ghost" style="color:var(--bad);border-color:var(--bad)" onclick="wipeAll()">Delete all leads</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(this)">
+    </div>
+  </div>
+</section>
+
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= State & storage ================= */
+const db = new Dexie('leadradar');
+db.version(1).stores({ leads: '++id, business_name, status, createdAt' });
+
+const S = {
+  get worker(){ return localStorage.getItem('lr_worker') || ''; },
+  set worker(v){ localStorage.setItem('lr_worker', v.trim().replace(/\/+$/,'')); },
+  get defLoc(){ return localStorage.getItem('lr_defloc') || ''; },
+  set defLoc(v){ localStorage.setItem('lr_defloc', v.trim()); }
+};
+
+let current = null; // last scan result (not yet saved)
+
+/* ================= Tabs ================= */
+function showTab(t){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  document.getElementById('nav-'+t).classList.add('active');
+  if(t==='leads') renderLeads();
+  if(t==='settings'){ document.getElementById('setWorker').value=S.worker; document.getElementById('setLoc').value=S.defLoc; }
+  window.scrollTo(0,0);
+}
+
+function toast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on');
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'),2200);
+}
+function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function copyText(txt){ navigator.clipboard.writeText(txt).then(()=>toast('Copied')); }
+
+/* ================= Scan flow ================= */
+function step(n, state){
+  const el=document.getElementById('ps'+n);
+  el.classList.remove('doing','done');
+  if(state) el.classList.add(state);
+}
+
+async function api(path, opts){
+  const res = await fetch(S.worker + path, opts);
+  const data = await res.json().catch(()=>({error:'Bad response from Worker'}));
+  if(!res.ok || data.error) throw new Error(data.error || ('HTTP '+res.status));
+  return data;
+}
+
+async function runScan(){
+  const name=document.getElementById('inName').value.trim();
+  const loc=document.getElementById('inLoc').value.trim() || S.defLoc;
+  const site=document.getElementById('inSite').value.trim();
+  if(!S.worker){ document.getElementById('setupHint').style.display='block'; return; }
+  if(!name||!loc){ toast('Enter business name and location'); return; }
+
+  const btn=document.getElementById('scanBtn'); btn.disabled=true; btn.textContent='Scanning…';
+  document.getElementById('dossier').classList.remove('on');
+  const prog=document.getElementById('progress'); prog.classList.add('on');
+  [1,2,3].forEach(n=>step(n,null)); step(1,'doing');
+
+  try{
+    const r = await api('/research',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,location:loc,website:site||undefined})});
+    step(1,'done'); step(2,'doing');
+
+    const profile=r.profile||{};
+    let whois=null;
+    const domain = site || profile.website;
+    if(domain){ try{ whois = await api('/whois?domain='+encodeURIComponent(domain)); }catch(e){} }
+    step(2,'done'); step(3,'doing');
+
+    const a = await api('/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:{...profile, whois}})});
+    step(3,'done');
+
+    current = { profile, whois, sources:r.sources||[], analysis:a.analysis||{}, query:{name,location:loc,website:site} };
+    renderDossier(current, false);
+    setTimeout(()=>prog.classList.remove('on'), 600);
+  }catch(e){
+    toast('Scan failed: '+e.message);
+    prog.classList.remove('on');
+  }finally{
+    btn.disabled=false; btn.textContent='Run radar scan';
+  }
+}
+
+/* ================= Dossier render ================= */
+function pill(found, yes='Found', no='Missing'){
+  return found ? '<span class="pill ok">'+yes+'</span>' : '<span class="pill no">'+no+'</span>';
+}
+function kv(label, valueHtml){
+  if(valueHtml===null||valueHtml===undefined||valueHtml==='') return '';
+  return '<div class="kv"><b>'+label+'</b><span>'+valueHtml+'</span></div>';
+}
+function soc(name, obj, extra){
+  const found=obj&&obj.found;
+  let body = found
+    ? (obj.url?'<a href="'+esc(obj.url)+'" target="_blank" rel="noopener">Open profile</a>':'Found') + (extra?'<br>'+extra:'')
+    : '<span class="pill no">Missing</span>';
+  return '<div class="soc"><b>'+name+'</b>'+body+'</div>';
+}
+function verifyLinks(q){
+  const n=encodeURIComponent(q.name), l=encodeURIComponent(q.location), nl=encodeURIComponent(q.name+' '+q.location);
+  const links=[
+    ['Google', 'https://www.google.com/search?q='+nl],
+    ['Maps', 'https://www.google.com/maps/search/'+nl],
+    ['Facebook', 'https://www.facebook.com/search/pages/?q='+n],
+    ['Instagram', 'https://www.instagram.com/explore/search/keyword/?q='+n],
+    ['LinkedIn', 'https://www.linkedin.com/search/results/companies/?keywords='+n],
+    ['Yelp', 'https://www.yelp.com/search?find_desc='+n+'&find_loc='+l],
+    ['BBB', 'https://www.bbb.org/search?find_text='+n+'&find_loc='+l],
+    ['WA SOS', 'https://ccfs.sos.wa.gov/#/BusinessSearch'],
+    ['WA L&I', 'https://secure.lni.wa.gov/verify/']
+  ];
+  return links.map(x=>'<a href="'+x[1]+'" target="_blank" rel="noopener">'+x[0]+' ↗</a>').join('');
+}
+function dial(score){
+  const s=Math.max(0,Math.min(100,score||0));
+  const r=78, c=2*Math.PI*r, off=c*(1-s/100);
+  const col = s>=70?'var(--good)': s>=45?'var(--signal-dark)':'var(--bad)';
+  return '<div class="dial"><svg width="180" height="180" viewBox="0 0 180 180">'
+    +'<circle cx="90" cy="90" r="'+r+'" fill="none" stroke="#E3EAEB" stroke-width="12"/>'
+    +'<circle cx="90" cy="90" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="12" stroke-linecap="round" stroke-dasharray="'+c+'" stroke-dashoffset="'+off+'"/>'
+    +'</svg><div class="num"><b>'+s+'</b><i>Lead score</i></div></div>';
+}
+
+function renderDossier(d, saved){
+  const p=d.profile||{}, a=d.analysis||{}, w=d.whois, q=d.query||{};
+  const gb=p.google_business||{}, sr=p.state_registration||{};
+  const sc=a.scores||{};
+  const verdict=(a.verdict||'').toUpperCase();
+  const vClass = verdict.includes('HIGH')?'hi': (verdict.includes('LOW')?'lo':'md');
+
+  const phones=(p.phones||[]).map(x=>'<a href="tel:'+esc(x.replace(/[^\d+]/g,''))+'">'+esc(x)+'</a>').join(' · ');
+  const emails=(p.emails||[]).map(x=>'<a href="mailto:'+esc(x)+'">'+esc(x)+'</a>').join(' · ');
+  const bars=[['Website',sc.website],['SEO',sc.seo],['Google Business',sc.google_business],['Social Media',sc.social_media],['Reachability',sc.reachability]]
+    .map(x=>'<div class="bar"><div class="lbl"><span>'+x[0]+'</span><span class="mono">'+(x[1]??'–')+'/10</span></div><div class="track"><div class="fill" style="width:'+((x[1]||0)*10)+'%"></div></div></div>').join('');
+  const recos=(a.recommended_services||[]).map(x=>'<div class="reco"><b>'+esc(x.service)+'</b> — '+esc(x.reason)+'</div>').join('');
+  const emailTxt = a.cold_email ? 'Subject: '+(a.cold_email.subject||'')+'\n\n'+(a.cold_email.body||'') : '';
+  const mailto = (p.emails&&p.emails[0]&&a.cold_email)
+    ? 'mailto:'+encodeURIComponent(p.emails[0])+'?subject='+encodeURIComponent(a.cold_email.subject||'')+'&body='+encodeURIComponent(a.cold_email.body||'') : null;
+
+  document.getElementById('dossier').innerHTML = `
+  <div class="dossier-head">
+    <div>
+      <div class="dh-name">${esc(p.business_name||q.name)}</div>
+      <div class="dh-sub">${esc(p.address||q.location)} · Scanned ${new Date().toLocaleDateString()}</div>
+    </div>
+    <div class="dh-actions">
+      ${saved?'':'<button class="btn btn-primary" style="width:auto;padding:10px 18px" onclick="saveLead()">Save lead</button>'}
+      <button class="btn btn-ghost" style="color:#fff;border-color:#3A4C56" onclick="window.print()">PDF</button>
+    </div>
+  </div>
+  <div class="dossier-body"><div class="dgrid">
+    <div class="dleft">
+
+      <div class="sec"><span class="sec-tab">Contact</span><div class="sec-body">
+        ${kv('Phone', phones||'<span class="pill no">Not found</span>')}
+        ${kv('Email', emails||'<span class="pill no">Not found</span>')}
+        ${kv('Address', esc(p.address))}
+        ${kv('Owner / DM', esc(p.owner_or_decision_maker))}
+        ${kv('Best channel', esc(a.best_contact_method))}
+      </div></div>
+
+      <div class="sec"><span class="sec-tab">Web Presence</span><div class="sec-body">
+        ${kv('Website', p.website?('<a href="'+esc(p.website)+'" target="_blank" rel="noopener">'+esc(p.website)+'</a> <span class="pill mid">'+esc(p.website_status||'')+'</span>'):'<span class="pill no">No website</span>')}
+        ${kv('Tech', esc(p.tech_stack))}
+        ${w&&w.found?kv('Domain age', esc(w.age_years!=null?(w.age_years+' years (since '+String(w.created).slice(0,10)+')'):'')):''}
+        ${w&&w.found?kv('Registrar', esc(w.registrar)):''}
+        ${kv('SEO signals', esc(p.seo_signals))}
+      </div></div>
+
+      <div class="sec"><span class="sec-tab">Google Business</span><div class="sec-body">
+        ${kv('Profile', pill(gb.found))}
+        ${gb.found?kv('Rating', (gb.rating!=null?'★ '+esc(gb.rating):'–')+(gb.review_count!=null?' · '+esc(gb.review_count)+' reviews':'')):''}
+        ${gb.found?kv('Category', esc(gb.category)):''}
+        ${gb.found?kv('Hours', gb.hours_listed?'<span class="pill ok">Listed</span>':'<span class="pill no">Not listed</span>'):''}
+      </div></div>
+
+      <div class="sec"><span class="sec-tab">Social</span><div class="sec-body"><div class="socgrid">
+        ${soc('Facebook', p.facebook, p.facebook&&p.facebook.followers?esc(p.facebook.followers)+' followers':'')}
+        ${soc('Instagram', p.instagram, p.instagram&&p.instagram.followers?esc(p.instagram.followers)+' followers':'')}
+        ${soc('LinkedIn', p.linkedin,'')}
+        ${soc('Yelp', p.yelp, p.yelp&&p.yelp.rating?('★ '+esc(p.yelp.rating)+(p.yelp.review_count?' · '+esc(p.yelp.review_count)+' reviews':'')):'')}
+        ${soc('BBB', p.bbb, p.bbb&&p.bbb.rating?('Rating '+esc(p.bbb.rating)):'')}
+        ${soc('YouTube', p.youtube,'')}
+      </div></div></div>
+
+      <div class="sec"><span class="sec-tab">State Registration</span><div class="sec-body">
+        ${kv('Registry', pill(sr.found))}
+        ${sr.found?kv('Status', esc(sr.status)):''}
+        ${sr.found?kv('Registered', esc(sr.registered_date)):''}
+        ${sr.found?kv('UBI / ID', '<span class="mono">'+esc(sr.ubi_or_entity_id||'')+'</span>'):''}
+        ${sr.found?kv('Agent', esc(sr.registered_agent)):''}
+        ${kv('In business', p.years_in_business!=null?esc(p.years_in_business)+' years':null)}
+      </div></div>
+
+      <div class="sec"><span class="sec-tab">Notes</span><div class="sec-body" style="font-size:14px">${esc(p.notes||'—')}</div></div>
+
+      <div class="sec"><span class="sec-tab">Verify Manually</span><div class="sec-body"><div class="linkrow">${verifyLinks(q)}</div></div></div>
+
+      ${(d.sources&&d.sources.length)?'<div class="sec"><span class="sec-tab">Sources</span><div class="sec-body"><ul class="sources">'+d.sources.map(s=>'<li><a href="'+esc(s.uri)+'" target="_blank" rel="noopener">'+esc(s.title)+'</a></li>').join('')+'</ul></div></div>':''}
+    </div>
+
+    <div class="dright">
+      <div class="dial-wrap">
+        ${dial(a.overall)}
+        ${verdict?'<div class="stamp '+vClass+'">'+esc(verdict)+(vClass==='hi'&&!verdict.includes('LEAD')?' LEAD':'')+'</div>':''}
+      </div>
+      ${a.why?'<div class="why">'+esc(a.why)+'</div>':''}
+      <div class="bars">${bars}</div>
+
+      ${recos?'<div class="sec"><span class="sec-tab">Pitch These</span><div class="sec-body">'+recos+'</div></div>':''}
+
+      ${emailTxt?`<div class="sec"><span class="sec-tab">Cold Email</span>
+        <div class="copybox" id="emailBox">${esc(emailTxt)}</div>
+        <div class="copyrow">
+          <button class="btn btn-dark" onclick="copyText(document.getElementById('emailBox').textContent)">Copy email</button>
+          ${mailto?'<a class="btn btn-ghost" style="text-decoration:none" href="'+mailto+'">Open in Gmail</a>':''}
+        </div></div>`:''}
+
+      ${a.call_opener?`<div class="sec"><span class="sec-tab">Call Opener</span>
+        <div class="copybox" id="callBox">${esc(a.call_opener)}</div>
+        <div class="copyrow"><button class="btn btn-dark" onclick="copyText(document.getElementById('callBox').textContent)">Copy script</button></div></div>`:''}
+    </div>
+  </div></div>`;
+
+  const box=document.getElementById('dossier');
+  box.classList.add('on');
+  box.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* ================= CRM ================= */
+async function saveLead(){
+  if(!current) return;
+  const p=current.profile||{};
+  await db.leads.add({
+    business_name: p.business_name || current.query.name,
+    location: current.query.location,
+    phone: (p.phones||[])[0]||'',
+    email: (p.emails||[])[0]||'',
+    website: p.website||'',
+    score: current.analysis?.overall ?? null,
+    verdict: current.analysis?.verdict || '',
+    status: 'New',
+    notes: '',
+    data: current,
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  });
+  toast('Lead saved');
+  updateCount();
+  renderDossier(current, true);
+}
+
+async function updateCount(){
+  const n=await db.leads.count();
+  document.getElementById('leadCount').textContent = n?('('+n+')'):'';
+}
+
+async function renderLeads(){
+  const qtxt=(document.getElementById('crmSearch').value||'').toLowerCase();
+  const st=document.getElementById('crmStatus').value;
+  let leads=await db.leads.orderBy('createdAt').reverse().toArray();
+  if(st) leads=leads.filter(l=>l.status===st);
+  if(qtxt) leads=leads.filter(l=>(l.business_name+' '+l.location+' '+l.phone+' '+l.email+' '+(l.notes||'')).toLowerCase().includes(qtxt));
+
+  const el=document.getElementById('leadList');
+  if(!leads.length){
+    el.innerHTML='<div class="empty"><b>No leads yet</b>Run a scan and hit “Save lead” — it lands here with a full pipeline.</div>';
+    return;
+  }
+  el.innerHTML=leads.map(l=>`
+    <div class="lead-card status-${(l.status||'New').replace(/\s/g,'')}">
+      <div class="lead-row">
+        <span class="nm">${esc(l.business_name)}</span>
+        <span class="loc">${esc(l.location)}</span>
+        ${l.score!=null?'<span class="score-chip">'+l.score+'</span>':''}
+      </div>
+      <div class="lead-meta">
+        <select onchange="setStatus(${l.id},this.value)">
+          ${['New','Called','Interested','Not Interested','Appointment','Proposal Sent','Client'].map(s=>'<option '+(l.status===s?'selected':'')+'>'+s+'</option>').join('')}
+        </select>
+        ${l.phone?'<span class="contact">📞 <a href="tel:'+esc(l.phone.replace(/[^\d+]/g,''))+'">'+esc(l.phone)+'</a></span>':''}
+        ${l.email?'<span class="contact">✉️ <a href="mailto:'+esc(l.email)+'">'+esc(l.email)+'</a></span>':''}
+        ${l.website?'<span class="contact">🌐 <a href="'+esc(l.website)+'" target="_blank" rel="noopener">Site</a></span>':''}
+        <button class="btn btn-ghost" style="margin-left:auto" onclick="openLead(${l.id})">View dossier</button>
+        <button class="btn btn-ghost" style="color:var(--bad)" onclick="delLead(${l.id})">Delete</button>
+      </div>
+      <textarea class="lead-notes" placeholder="Notes…" onchange="setNotes(${l.id},this.value)">${esc(l.notes||'')}</textarea>
+    </div>`).join('');
+}
+
+async function setStatus(id,v){ await db.leads.update(id,{status:v,updatedAt:Date.now()}); renderLeads(); }
+async function setNotes(id,v){ await db.leads.update(id,{notes:v,updatedAt:Date.now()}); toast('Note saved'); }
+async function delLead(id){ if(confirm('Delete this lead?')){ await db.leads.delete(id); renderLeads(); updateCount(); } }
+async function openLead(id){
+  const l=await db.leads.get(id); if(!l||!l.data) return;
+  current=l.data;
+  showTab('scan');
+  renderDossier(l.data, true);
+}
+
+/* ================= Export / Import ================= */
+function download(name, content, type){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type}));
+  a.download=name; a.click(); URL.revokeObjectURL(a.href);
+}
+async function exportCSV(){
+  const leads=await db.leads.toArray();
+  const head=['Business','Location','Phone','Email','Website','Score','Verdict','Status','Notes','Added'];
+  const rows=leads.map(l=>[l.business_name,l.location,l.phone,l.email,l.website,l.score??'',l.verdict,l.status,(l.notes||'').replace(/\n/g,' '),new Date(l.createdAt).toLocaleDateString()]);
+  const csv=[head,...rows].map(r=>r.map(c=>'"'+String(c??'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  download('leadradar-leads.csv', csv, 'text/csv');
+}
+async function exportJSON(){
+  const leads=await db.leads.toArray();
+  download('leadradar-backup-'+new Date().toISOString().slice(0,10)+'.json', JSON.stringify({app:'LeadRadar',leads},null,2), 'application/json');
+}
+async function importJSON(input){
+  const f=input.files[0]; if(!f) return;
+  try{
+    const data=JSON.parse(await f.text());
+    const leads=data.leads||[];
+    for(const l of leads){ delete l.id; await db.leads.add(l); }
+    toast('Imported '+leads.length+' leads'); updateCount(); renderLeads();
+  }catch(e){ toast('Import failed: bad file'); }
+  input.value='';
+}
+async function wipeAll(){
+  if(confirm('Delete ALL leads? This cannot be undone.')){ await db.leads.clear(); updateCount(); renderLeads(); toast('All leads deleted'); }
+}
+
+/* ================= Settings ================= */
+function saveSettings(){
+  S.worker=document.getElementById('setWorker').value;
+  S.defLoc=document.getElementById('setLoc').value;
+  document.getElementById('setMsg').innerHTML='<div class="ok-msg">Saved.</div>';
+  document.getElementById('setupHint').style.display='none';
+  toast('Settings saved');
+}
+async function testWorker(){
+  const url=document.getElementById('setWorker').value.trim().replace(/\/+$/,'');
+  const msg=document.getElementById('setMsg');
+  if(!url){ msg.innerHTML='<div class="err-msg">Enter your Worker URL first.</div>'; return; }
+  msg.innerHTML='<div class="ok-msg">Testing…</div>';
+  try{
+    const r=await fetch(url+'/health'); const d=await r.json();
+    msg.innerHTML = d.ok ? '<div class="ok-msg">✓ Connected to LeadRadar Worker.</div>' : '<div class="err-msg">Reached the URL but it doesn\'t look like the LeadRadar Worker.</div>';
+  }catch(e){ msg.innerHTML='<div class="err-msg">Could not reach that URL. Check it\'s deployed and CORS is allowed.</div>'; }
+}
+
+/* ================= Init ================= */
+document.getElementById('inLoc').value = S.defLoc;
+updateCount();
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+document.getElementById('inName').addEventListener('keydown',e=>{ if(e.key==='Enter') runScan(); });
+document.getElementById('inLoc').addEventListener('keydown',e=>{ if(e.key==='Enter') runScan(); });
+</script>
+</body>
+</html>
