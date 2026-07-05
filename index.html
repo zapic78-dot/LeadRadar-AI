@@ -197,6 +197,7 @@ main{max-width:1060px;margin:0 auto;padding:24px 16px 80px}
   <div class="brand"><h1>LeadRadar AI</h1><span>Zapic Digital US</span></div>
   <nav>
     <button id="nav-scan" class="active" onclick="showTab('scan')">Scan</button>
+    <button id="nav-finder" onclick="showTab('finder')">Finder</button>
     <button id="nav-leads" onclick="showTab('leads')">Leads <span id="leadCount" class="mono"></span></button>
     <button id="nav-settings" onclick="showTab('settings')">Setup</button>
   </nav>
@@ -231,6 +232,21 @@ main{max-width:1060px;margin:0 auto;padding:24px 16px 80px}
   </div>
 
   <div class="dossier" id="dossier"></div>
+</section>
+
+<!-- ================= FINDER ================= -->
+<section id="tab-finder" class="tab">
+  <div class="scan-hero">
+    <h2>Build your own lead lists</h2>
+    <p>Pick a niche and an area. LeadRadar pulls real businesses — then one click runs the full dossier on any of them.</p>
+  </div>
+  <div class="scan-card">
+    <div class="field"><label for="fNiche">Niche / business type</label><input id="fNiche" placeholder="roofing companies, trucking, dentists…" autocomplete="off"></div>
+    <div class="field"><label for="fLoc">City / State</label><input id="fLoc" placeholder="Kent, WA" autocomplete="off"></div>
+    <button class="btn btn-primary" id="findBtn" onclick="runFind()">Find businesses</button>
+  </div>
+  <div id="findMeta" class="hint"></div>
+  <div id="findList" style="max-width:760px;margin:16px auto 0"></div>
 </section>
 
 <!-- ================= LEADS ================= -->
@@ -726,6 +742,43 @@ document.addEventListener('click',e=>{ if(!sug.contains(e.target)&&e.target!==ad
 function stateAbbr(s){
   const m={'Washington':'WA','Oregon':'OR','California':'CA','Idaho':'ID','Texas':'TX','Florida':'FL','New York':'NY','Arizona':'AZ','Nevada':'NV','Colorado':'CO','Utah':'UT','Georgia':'GA','Illinois':'IL','Ohio':'OH','Pennsylvania':'PA','North Carolina':'NC','Michigan':'MI','New Jersey':'NJ','Virginia':'VA','Tennessee':'TN','Massachusetts':'MA','Indiana':'IN','Missouri':'MO','Maryland':'MD','Wisconsin':'WI','Minnesota':'MN','South Carolina':'SC','Alabama':'AL','Louisiana':'LA','Kentucky':'KY','Oklahoma':'OK','Connecticut':'CT','Iowa':'IA','Mississippi':'MS','Arkansas':'AR','Kansas':'KS','New Mexico':'NM','Nebraska':'NE','West Virginia':'WV','Hawaii':'HI','New Hampshire':'NH','Maine':'ME','Montana':'MT','Rhode Island':'RI','Delaware':'DE','South Dakota':'SD','North Dakota':'ND','Alaska':'AK','Vermont':'VT','Wyoming':'WY'};
   return m[s]||s;
+}
+
+/* ================= Finder ================= */
+async function runFind(){
+  const niche=document.getElementById('fNiche').value.trim();
+  const loc=document.getElementById('fLoc').value.trim() || S.defLoc;
+  if(!S.worker){ toast('Add your Worker URL in Setup first'); return; }
+  if(!niche||!loc){ toast('Enter a niche and location'); return; }
+  const btn=document.getElementById('findBtn'); btn.disabled=true; btn.textContent='Searching…';
+  document.getElementById('findList').innerHTML=''; document.getElementById('findMeta').textContent='';
+  try{
+    const r=await api('/find',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({niche,location:loc})});
+    const list=r.results||[];
+    document.getElementById('findMeta').innerHTML = list.length
+      ? esc(list.length+' businesses · Source: '+r.source)
+      : 'Nothing found — try a broader niche or bigger city.';
+    document.getElementById('findList').innerHTML=list.map((b,i)=>`
+      <div class="lead-card">
+        <div class="lead-row">
+          <span class="nm">${esc(b.name)}</span>
+          ${b.rating!=null?'<span class="loc">★ '+esc(b.rating)+(b.review_count!=null?' ('+esc(b.review_count)+')':'')+'</span>':''}
+          <button class="btn btn-primary" style="width:auto;margin-left:auto;padding:9px 16px" onclick="scanFromFinder(${i})">Radar scan</button>
+        </div>
+        ${b.address?'<div class="lead-meta"><span class="contact">📍 '+esc(b.address)+'</span></div>':''}
+      </div>`).join('');
+    window._findResults=list; window._findLoc=loc;
+  }catch(e){ toast('Find failed: '+e.message); }
+  finally{ btn.disabled=false; btn.textContent='Find businesses'; }
+}
+function scanFromFinder(i){
+  const b=(window._findResults||[])[i]; if(!b) return;
+  document.getElementById('inName').value=b.name;
+  document.getElementById('inLoc').value=window._findLoc||'';
+  document.getElementById('inAddr').value=b.address||'';
+  document.getElementById('inUbi').value='';
+  showTab('scan');
+  runScan();
 }
 
 /* ================= Init ================= */
