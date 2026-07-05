@@ -311,6 +311,12 @@ function toast(msg){
 }
 function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function copyText(txt){ navigator.clipboard.writeText(txt).then(()=>toast('Copied')); }
+function openSms(){
+  const n=(document.getElementById('smsNum')?.value||'').replace(/[^\d+]/g,'');
+  const b=encodeURIComponent(document.getElementById('smsBox')?.textContent||'');
+  if(!n){ toast('Enter a phone number first'); return; }
+  location.href='sms:'+n+'?body='+b;
+}
 
 /* ================= Scan flow ================= */
 function step(n, state){
@@ -454,7 +460,7 @@ function renderDossier(d, saved){
   <div class="dossier-head">
     <div>
       <div class="dh-name">${esc(p.business_name||q.name)}</div>
-      <div class="dh-sub">${esc(p.address||q.location)} · Scanned ${ev&&ev.scanned_at?new Date(ev.scanned_at).toLocaleString():new Date().toLocaleDateString()}${p.confidence?' · <span class="pill '+(p.confidence==='high'?'ok':(p.confidence==='low'?'no':'mid'))+'">'+esc(p.confidence)+' confidence</span>':''}${(p.verified&&p.verified.google_maps)?' <span class="pill ok">✓ Google Maps API</span>':''}${(p.verified&&p.verified.fmcsa)?' <span class="pill ok">✓ FMCSA API</span>':''}${d.cached?' · <span class="cachebar">cached — <a onclick="runScan(true)">re-scan fresh</a></span>':''}</div>
+      <div class="dh-sub">${esc(p.address||q.location)} · Scanned ${ev&&ev.scanned_at?new Date(ev.scanned_at).toLocaleString():new Date().toLocaleDateString()}${p.confidence?' · <span class="pill '+(p.confidence==='high'?'ok':(p.confidence==='low'?'no':'mid'))+'">'+esc(p.confidence)+' confidence</span>':''}${(p.verified&&p.verified.google_maps)?' <span class="pill ok">✓ Google Maps API</span>':''}${(p.verified&&p.verified.fmcsa)?' <span class="pill ok">✓ FMCSA API</span>':''}${(p.verified&&p.verified.wa_sos)?' <span class="pill ok">✓ WA SOS Registry</span>':''}${d.cached?' · <span class="cachebar">cached — <a onclick="runScan(true)">re-scan fresh</a></span>':''}</div>
     </div>
     <div class="dh-actions">
       ${saved?'':'<button class="btn btn-primary" style="width:auto;padding:10px 18px" onclick="saveLead()">Save lead</button>'}
@@ -498,8 +504,9 @@ function renderDossier(d, saved){
       </div></div></div>
 
       <div class="sec"><span class="sec-tab">State Registration</span><div class="sec-body">
-        ${kv('Registry', pill(sr.found))}
+        ${kv('Registry', pill(sr.found)+(p.verified&&p.verified.wa_sos?' <span class="pill ok" title="Pulled directly from WA Secretary of State CCFS">✓ Direct from WA SOS</span>':''))}
         ${sr.found?kv('Status', esc(sr.status)):''}
+        ${sr.found&&sr.entity_type?kv('Entity type', esc(sr.entity_type)):''}
         ${sr.found?kv('Registered', esc(sr.registered_date)):''}
         ${sr.found?kv('UBI / ID', '<span class="mono">'+esc(sr.ubi_or_entity_id||'')+'</span>'):''}
         ${sr.found?kv('Agent', esc(sr.registered_agent)):''}
@@ -516,7 +523,7 @@ function renderDossier(d, saved){
 
       <div class="sec"><span class="sec-tab">Notes</span><div class="sec-body" style="font-size:14px">${esc(p.notes||'—')}</div></div>
 
-      <div class="sec"><span class="sec-tab">Verify Manually</span><div class="sec-body"><div class="linkrow">${verifyLinks(q)}</div></div></div>
+      <div class="sec"><span class="sec-tab">Quick Links</span><div class="sec-body"><div class="linkrow">${verifyLinks(q)}</div></div></div>
 
       ${(d.sources&&d.sources.length)?'<div class="sec"><span class="sec-tab">Sources</span><div class="sec-body"><ul class="sources">'+d.sources.map(s=>'<li><a href="'+esc(s.uri)+'" target="_blank" rel="noopener">'+esc(s.title)+'</a></li>').join('')+'</ul></div></div>':''}
     </div>
@@ -536,6 +543,14 @@ function renderDossier(d, saved){
         <div class="copyrow">
           <button class="btn btn-dark" onclick="copyText(document.getElementById('emailBox').textContent)">Copy email</button>
           ${mailto?'<a class="btn btn-ghost" style="text-decoration:none" href="'+mailto+'">Open in Gmail</a>':''}
+        </div></div>`:''}
+
+      ${a.cold_sms?`<div class="sec"><span class="sec-tab">Text Message</span>
+        <div class="copybox" id="smsBox">${esc(a.cold_sms)}</div>
+        <input id="smsNum" placeholder="Phone number to text" value="${esc((p.phones||[])[0]||'')}" style="width:100%;margin-top:8px;padding:10px 12px;border:1px solid var(--line);border-radius:8px">
+        <div class="copyrow">
+          <button class="btn btn-dark" onclick="copyText(document.getElementById('smsBox').textContent)">Copy text</button>
+          <button class="btn btn-ghost" onclick="openSms()">Open in Messages</button>
         </div></div>`:''}
 
       ${a.call_opener?`<div class="sec"><span class="sec-tab">Call Opener</span>
