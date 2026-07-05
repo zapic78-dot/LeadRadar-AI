@@ -420,7 +420,13 @@ function verifyLinks(q){
     ['WA SOS', 'https://ccfs.sos.wa.gov/#/BusinessSearch'],
     ['WA L&I', 'https://secure.lni.wa.gov/verify/']
   ];
-  return links.map(x=>'<a href="'+x[1]+'" target="_blank" rel="noopener">'+x[0]+' ↗</a>').join('');
+  return links.map(x=>'<a href="'+x[1]+'" target="_blank" rel="noopener" onclick="return peek(this.href)">'+x[0]+' ↗</a>').join('');
+}
+function peek(u){
+  const W=Math.min(1150,screen.width-80), H=Math.min(820,screen.height-120);
+  const L=Math.round((screen.width-W)/2), T=Math.round((screen.height-H)/2);
+  const w=window.open(u,'lr_peek','width='+W+',height='+H+',left='+L+',top='+T+',noopener');
+  return w?false:true; // popup blocked → fall back to normal tab
 }
 function dial(score){
   const s=Math.max(0,Math.min(100,score||0));
