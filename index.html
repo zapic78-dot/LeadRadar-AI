@@ -73,6 +73,11 @@ main{max-width:1060px;margin:0 auto;padding:24px 16px 80px}
 .sug.on{display:block}
 .sug div{padding:10px 14px;font-size:14px;cursor:pointer;border-bottom:1px solid #F0F4F5}
 .sug div:hover,.sug div.hl{background:#FBEFD9}
+.evrow{padding:4px 0;border-bottom:1px dashed #EEF2F3;font-size:15px}
+.evrow:last-child{border:none}
+.evrow small.src{display:block;color:var(--muted);font-size:11px;margin-top:1px}
+.cachebar{font-size:13px;color:var(--muted)}
+.cachebar a{cursor:pointer}
 
 /* ---------- Progress ---------- */
 .progress{max-width:640px;margin:18px auto 0;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 22px;display:none}
@@ -321,7 +326,7 @@ async function api(path, opts){
   return data;
 }
 
-async function runScan(){
+async function runScan(force){
   const name=document.getElementById('inName').value.trim();
   const loc=document.getElementById('inLoc').value.trim() || S.defLoc;
   const addr=document.getElementById('inAddr').value.trim();
@@ -335,19 +340,19 @@ async function runScan(){
   [1,2,3].forEach(n=>step(n,null)); step(1,'doing');
 
   try{
-    const r = await api('/research',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,location:loc,address:addr||undefined,ubi:ubi||undefined})});
+    const r = await api('/research',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,location:loc,address:addr||undefined,ubi:ubi||undefined,force:!!force})});
     step(1,'done'); step(2,'doing');
 
     const profile=r.profile||{};
     let whois=null;
-    const domain = profile.website;
+    const domain = normSite(profile.website);
     if(domain){ try{ whois = await api('/whois?domain='+encodeURIComponent(domain)); }catch(e){} }
     step(2,'done'); step(3,'doing');
 
     const a = await api('/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:{...profile, whois}})});
     step(3,'done');
 
-    current = { profile, whois, sources:r.sources||[], analysis:a.analysis||{}, query:{name,location:loc,address:addr,ubi} };
+    current = { profile, whois, sources:r.sources||[], analysis:a.analysis||{}, evidence:r.evidence||null, cached:!!r.cached, query:{name,location:loc,address:addr,ubi} };
     renderDossier(current, false);
     setTimeout(()=>prog.classList.remove('on'), 600);
   }catch(e){
@@ -359,18 +364,41 @@ async function runScan(){
 }
 
 /* ================= Dossier render ================= */
-function pill(found, yes='Found', no='Missing'){
+function pill(found, yes='Found', no='Not Found'){
   return found ? '<span class="pill ok">'+yes+'</span>' : '<span class="pill no">'+no+'</span>';
+}
+function normSite(u){
+  if(!u) return null; u=String(u).trim();
+  if(!/^https?:\/\//i.test(u)) u='https://'+u;
+  try{ new URL(u); return u; }catch(e){ return null; }
+}
+function vpill(verified){
+  return verified ? '<span class="pill ok" title="Retrieved directly from a primary source">✓ Verified</span>' : '<span class="pill mid" title="From a Google search result — double-check before use">search result</span>';
+}
+function evRow(item, linkFn){
+  return '<div class="evrow">'+linkFn(item.value)+' '+vpill(item.verified)+'<small class="src">'+esc(item.source)+'</small></div>';
+}
+function evList(list, linkFn, label){
+  if(!list||!list.length) return '<div class="kv"><b>'+label+'</b><span class="pill no">Not Found</span></div>';
+  return '<div class="kv" style="align-items:flex-start"><b>'+label+'</b><span style="flex:1">'+list.map(x=>evRow(x,linkFn)).join('')+'</span></div>';
 }
 function kv(label, valueHtml){
   if(valueHtml===null||valueHtml===undefined||valueHtml==='') return '';
   return '<div class="kv"><b>'+label+'</b><span>'+valueHtml+'</span></div>';
 }
-function soc(name, obj, extra){
-  const found=obj&&obj.found;
-  let body = found
-    ? (obj.url?'<a href="'+esc(obj.url)+'" target="_blank" rel="noopener">Open profile</a>':'Found') + (extra?'<br>'+extra:'')
-    : '<span class="pill no">Missing</span>';
+function soc(name, key, obj, ev, extra){
+  const e = ev && ev.socials ? ev.socials[key] : null;
+  const url = (e && e.url) || (obj && obj.found && normSite(obj.url)) || null;
+  let body;
+  if(url){
+    body = '<a href="'+esc(url)+'" target="_blank" rel="noopener">Open profile</a> '+(e?vpill(e.verified):'')
+      + (extra?'<br>'+extra:'')
+      + (e?'<small class="src">'+esc(e.source)+'</small>':'');
+  } else if(obj && obj.found){
+    body = '<span class="pill mid">Found — no URL confirmed</span>';
+  } else {
+    body = '<span class="pill no">Not Found</span>';
+  }
   return '<div class="soc"><b>'+name+'</b>'+body+'</div>';
 }
 function verifyLinks(q){
@@ -405,8 +433,16 @@ function renderDossier(d, saved){
   const verdict=(a.verdict||'').toUpperCase();
   const vClass = verdict.includes('HIGH')?'hi': (verdict.includes('LOW')?'lo':'md');
 
-  const phones=(p.phones||[]).map(x=>'<a href="tel:'+esc(x.replace(/[^\d+]/g,''))+'">'+esc(x)+'</a>').join(' · ');
-  const emails=(p.emails||[]).map(x=>'<a href="mailto:'+esc(x)+'">'+esc(x)+'</a>').join(' · ');
+  const ev = d.evidence || null;
+  const phones = ev
+    ? evList(ev.phones, v=>'<a href="tel:'+esc(String(v).replace(/[^\d+]/g,''))+'">'+esc(v)+'</a>', 'Phone')
+    : kv('Phone', (p.phones||[]).map(x=>'<a href="tel:'+esc(x.replace(/[^\d+]/g,''))+'">'+esc(x)+'</a>').join(' · ')||'<span class="pill no">Not Found</span>');
+  const emails = ev
+    ? evList(ev.emails, v=>'<a href="mailto:'+esc(v)+'">'+esc(v)+'</a>', 'Email')
+    : kv('Email', (p.emails||[]).map(x=>'<a href="mailto:'+esc(x)+'">'+esc(x)+'</a>').join(' · ')||'<span class="pill no">Not Found</span>');
+  const addrRow = ev && ev.address
+    ? '<div class="kv"><b>Address</b><span>'+esc(ev.address.value)+' '+vpill(ev.address.verified)+'<small class="src" style="display:block">'+esc(ev.address.source)+'</small></span></div>'
+    : kv('Address', esc(p.address)||'<span class="pill no">Not Found</span>');
   const bars=[['Website',sc.website],['SEO',sc.seo],['Google Business',sc.google_business],['Social Media',sc.social_media],['Reachability',sc.reachability]]
     .map(x=>'<div class="bar"><div class="lbl"><span>'+x[0]+'</span><span class="mono">'+(x[1]??'–')+'/10</span></div><div class="track"><div class="fill" style="width:'+((x[1]||0)*10)+'%"></div></div></div>').join('');
   const recos=(a.recommended_services||[]).map(x=>'<div class="reco"><b>'+esc(x.service)+'</b> — '+esc(x.reason)+'</div>').join('');
@@ -418,7 +454,7 @@ function renderDossier(d, saved){
   <div class="dossier-head">
     <div>
       <div class="dh-name">${esc(p.business_name||q.name)}</div>
-      <div class="dh-sub">${esc(p.address||q.location)} · Scanned ${new Date().toLocaleDateString()}${p.confidence?' · <span class="pill '+(p.confidence==='high'?'ok':(p.confidence==='low'?'no':'mid'))+'">'+esc(p.confidence)+' confidence</span>':''}</div>
+      <div class="dh-sub">${esc(p.address||q.location)} · Scanned ${ev&&ev.scanned_at?new Date(ev.scanned_at).toLocaleString():new Date().toLocaleDateString()}${p.confidence?' · <span class="pill '+(p.confidence==='high'?'ok':(p.confidence==='low'?'no':'mid'))+'">'+esc(p.confidence)+' confidence</span>':''}${(p.verified&&p.verified.google_maps)?' <span class="pill ok">✓ Google Maps API</span>':''}${(p.verified&&p.verified.fmcsa)?' <span class="pill ok">✓ FMCSA API</span>':''}${d.cached?' · <span class="cachebar">cached — <a onclick="runScan(true)">re-scan fresh</a></span>':''}</div>
     </div>
     <div class="dh-actions">
       ${saved?'':'<button class="btn btn-primary" style="width:auto;padding:10px 18px" onclick="saveLead()">Save lead</button>'}
@@ -429,15 +465,16 @@ function renderDossier(d, saved){
     <div class="dleft">
 
       <div class="sec"><span class="sec-tab">Contact</span><div class="sec-body">
-        ${kv('Phone', phones||'<span class="pill no">Not found</span>')}
-        ${kv('Email', emails||'<span class="pill no">Not found</span>')}
-        ${kv('Address', esc(p.address))}
-        ${kv('Owner / DM', esc(p.owner_or_decision_maker))}
+        ${phones}
+        ${emails}
+        ${addrRow}
+        ${ev&&ev.contact_page?kv('Contact page','<a href="'+esc(ev.contact_page)+'" target="_blank" rel="noopener">'+esc(ev.contact_page)+'</a>'):''}
+        ${kv('Owner / DM', esc(p.owner_or_decision_maker)||'<span class="pill no">Not Found</span>')}
         ${kv('Best channel', esc(a.best_contact_method))}
       </div></div>
 
       <div class="sec"><span class="sec-tab">Web Presence</span><div class="sec-body">
-        ${kv('Website', p.website?('<a href="'+esc(p.website)+'" target="_blank" rel="noopener">'+esc(p.website)+'</a> <span class="pill mid">'+esc(p.website_status||'')+'</span>'):'<span class="pill no">No website</span>')}
+        ${kv('Website', normSite(p.website)?('<a href="'+esc(normSite(p.website))+'" target="_blank" rel="noopener">'+esc(p.website)+'</a> <span class="pill mid">'+esc(p.website_status||'')+'</span>'+(ev&&ev.website?' '+vpill(ev.website.verified):'')):'<span class="pill no">Not Found</span>')}
         ${kv('Tech', esc(p.tech_stack))}
         ${w&&w.found?kv('Domain age', esc(w.age_years!=null?(w.age_years+' years (since '+String(w.created).slice(0,10)+')'):'')):''}
         ${w&&w.found?kv('Registrar', esc(w.registrar)):''}
@@ -452,12 +489,12 @@ function renderDossier(d, saved){
       </div></div>
 
       <div class="sec"><span class="sec-tab">Social</span><div class="sec-body"><div class="socgrid">
-        ${soc('Facebook', p.facebook, p.facebook&&p.facebook.followers?esc(p.facebook.followers)+' followers':'')}
-        ${soc('Instagram', p.instagram, p.instagram&&p.instagram.followers?esc(p.instagram.followers)+' followers':'')}
-        ${soc('LinkedIn', p.linkedin,'')}
-        ${soc('Yelp', p.yelp, p.yelp&&p.yelp.rating?('★ '+esc(p.yelp.rating)+(p.yelp.review_count?' · '+esc(p.yelp.review_count)+' reviews':'')):'')}
-        ${soc('BBB', p.bbb, p.bbb&&p.bbb.rating?('Rating '+esc(p.bbb.rating)):'')}
-        ${soc('YouTube', p.youtube,'')}
+        ${soc('Facebook','facebook', p.facebook, ev, p.facebook&&p.facebook.followers?esc(p.facebook.followers)+' followers':'')}
+        ${soc('Instagram','instagram', p.instagram, ev, p.instagram&&p.instagram.followers?esc(p.instagram.followers)+' followers':'')}
+        ${soc('LinkedIn','linkedin', p.linkedin, ev,'')}
+        ${soc('Yelp','yelp', p.yelp, ev, p.yelp&&p.yelp.rating?('★ '+esc(p.yelp.rating)+(p.yelp.review_count?' · '+esc(p.yelp.review_count)+' reviews':'')):'')}
+        ${soc('BBB','bbb', p.bbb, ev, p.bbb&&p.bbb.rating?('Rating '+esc(p.bbb.rating)):'')}
+        ${soc('YouTube','youtube', p.youtube, ev,'')}
       </div></div></div>
 
       <div class="sec"><span class="sec-tab">State Registration</span><div class="sec-body">
