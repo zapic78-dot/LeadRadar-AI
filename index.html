@@ -372,6 +372,33 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 90px}
 .hrow .hv{width:34px;font-family:'IBM Plex Mono';font-size:13px}
 
 /* ============================================================
+   Batch triage
+   ============================================================ */
+.chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:20px auto 0;max-width:1100px}
+.chip{
+  border:1px solid var(--line);background:var(--glass);color:var(--ink-2);
+  border-radius:99px;padding:7px 14px;font-size:13px;font-weight:600;
+  transition:all .2s var(--ease);
+}
+.chip:hover{border-color:var(--line-strong)}
+.chip.on{border-color:var(--signal);background:var(--mid-bg);color:var(--ink)}
+.chip .n{font-family:'IBM Plex Mono';font-size:12px;opacity:.75;margin-left:4px}
+.sig{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px;letter-spacing:.02em}
+.sig.y{background:var(--good-bg);color:var(--good)}
+.sig.n{background:var(--bad-bg);color:var(--bad)}
+.sig.u{background:var(--mid-bg);color:var(--signal-deep)}
+:root[data-theme="dark"] .sig.u{color:var(--signal)}
+.bprow{display:flex;align-items:center;gap:10px;padding:8px 14px;font-size:14px;border-bottom:1px solid var(--line)}
+.bprow:last-child{border:none}
+.bprow .st{margin-left:auto;font-size:13px;color:var(--muted);flex:none}
+.bprow.doing .st{color:var(--signal)}
+.bprow.done .st{color:var(--good)}
+.bprow.fail .st{color:var(--bad)}
+.trow{padding:14px 16px;margin-bottom:10px}
+.trow .sigrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px;align-items:center}
+.trow .addr{font-size:13px;color:var(--muted);margin-top:6px}
+
+/* ============================================================
    Settings
    ============================================================ */
 .set-card{padding:22px;max-width:660px;margin:0 auto 16px}
@@ -403,6 +430,7 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 90px}
   <nav>
     <button id="nav-scan" class="active" onclick="showTab('scan')">Scan</button>
     <button id="nav-finder" onclick="showTab('finder')">Finder</button>
+    <button id="nav-batch" onclick="showTab('batch')">Batch</button>
     <button id="nav-leads" onclick="showTab('leads')">Leads <span id="leadCount" class="mono"></span></button>
     <button id="nav-compare" onclick="showTab('compare')">Compare</button>
     <button id="nav-stats" onclick="showTab('stats')">Stats</button>
@@ -458,6 +486,40 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 90px}
   </div>
   <div id="findMeta" class="hint"></div>
   <div id="findList" style="max-width:760px;margin:16px auto 0"></div>
+</section>
+
+<!-- ================= BATCH TRIAGE ================= -->
+<section id="tab-batch" class="tab">
+  <div class="scan-hero rise">
+    <h2>Paste a list. Walk away.</h2>
+    <p>Drop in up to 30 businesses. LeadRadar checks each one for phone, email, website, Google Business Profile, and socials — one cheap Places lookup + a direct site check per business. <b>No AI keys are used.</b> Then filter the segments and deep-scan only the winners.</p>
+  </div>
+  <div class="scan-card card rise">
+    <div class="field">
+      <label for="bList">Businesses — one per line ("Name, City ST" or just "Name")</label>
+      <textarea id="bList" class="ocbox" style="min-height:140px" placeholder="Diamond Construction LLC, Kent WA&#10;Joe's Roofing&#10;Pacific Auto Repair, Renton WA"></textarea>
+    </div>
+    <div class="field"><label for="bLoc">Default location (used for lines without a city)</label><input id="bLoc" placeholder="Kent, WA" autocomplete="off"></div>
+    <div class="set-actions" style="margin-bottom:12px">
+      <button class="btn btn-ghost" onclick="document.getElementById('bCsv').click()">Upload CSV</button>
+      <input type="file" id="bCsv" accept=".csv,.txt" style="display:none" onchange="loadBatchCSV(this)">
+      <span class="hint" style="margin:0;align-self:center">CSV: first column = name, second = location (optional)</span>
+    </div>
+    <button class="btn btn-primary" id="batchBtn" onclick="runBatch()">Triage all</button>
+  </div>
+  <div id="bProg" style="max-width:660px;margin:16px auto 0"></div>
+  <div id="bChips" class="chips"></div>
+  <div id="bTools" class="crm-top" style="display:none;max-width:1100px;margin:14px auto 0">
+    <select id="bSort" onchange="renderTriage()">
+      <option value="lowc">Least complete first (best targets)</option>
+      <option value="hic">Most complete first</option>
+      <option value="rating">Highest rating first</option>
+      <option value="new">Newest first</option>
+    </select>
+    <button class="btn btn-ghost" onclick="exportTriageCSV()">Export view CSV</button>
+    <button class="btn btn-ghost" style="color:var(--bad)" onclick="clearTriage()">Clear all</button>
+  </div>
+  <div id="bOut" style="max-width:1100px;margin:8px auto 0"></div>
 </section>
 
 <!-- ================= LEADS ================= -->
@@ -540,6 +602,10 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 90px}
 /* ================= State & storage (unchanged schema) ================= */
 const db = new Dexie('leadradar');
 db.version(1).stores({ leads: '++id, business_name, status, createdAt' });
+db.version(2).stores({
+  leads: '++id, business_name, status, createdAt',
+  triage: '++id, name, createdAt'
+});
 
 const S = {
   get worker(){ return localStorage.getItem('lr_worker') || ''; },
@@ -570,6 +636,7 @@ function showTab(t){
   document.getElementById('tab-'+t).classList.add('active');
   document.getElementById('nav-'+t).classList.add('active');
   if(t==='leads') renderLeads();
+  if(t==='batch'){ if(!document.getElementById('bLoc').value) document.getElementById('bLoc').value=S.defLoc; renderTriage(); }
   if(t==='compare') fillCompare();
   if(t==='stats') renderStats();
   if(t==='settings'){ document.getElementById('setWorker').value=S.worker; document.getElementById('setLoc').value=S.defLoc; }
@@ -1113,6 +1180,207 @@ async function openLead(id){
   current=l.data;
   showTab('scan');
   renderDossier(l.data, true);
+}
+
+/* ================= Batch triage ================= */
+let bFilter = 'all';
+
+function parseBatchInput(){
+  const defLoc = document.getElementById('bLoc').value.trim() || S.defLoc;
+  const lines = document.getElementById('bList').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  const items=[];
+  for(const line of lines.slice(0,30)){
+    // "Name, City ST" → split on the LAST comma so business names with commas survive
+    const i=line.lastIndexOf(',');
+    let name=line, loc=defLoc;
+    if(i>0 && i<line.length-1){
+      const maybeLoc=line.slice(i+1).trim();
+      // treat as location only if it looks like one (has letters, short-ish)
+      if(maybeLoc.length<=40 && /[A-Za-z]/.test(maybeLoc)){ name=line.slice(0,i).trim(); loc=maybeLoc; }
+    }
+    if(name) items.push({name, loc});
+  }
+  return items;
+}
+
+async function loadBatchCSV(input){
+  const f=input.files[0]; if(!f) return;
+  const text=await f.text();
+  const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  const out=[];
+  for(const line of lines){
+    // naive CSV: handles quoted first column
+    let cols;
+    if(line.startsWith('"')){
+      const m=line.match(/^"([^"]*)"\s*,?\s*(.*)$/);
+      cols=m?[m[1],m[2].replace(/^"|"$/g,'')]:[line];
+    } else cols=line.split(',');
+    const name=(cols[0]||'').trim();
+    if(!name||/^(name|business)/i.test(name)) continue; // skip header row
+    const loc=(cols[1]||'').trim();
+    out.push(name+(loc?', '+loc:''));
+  }
+  document.getElementById('bList').value=out.slice(0,30).join('\n');
+  toast('Loaded '+Math.min(out.length,30)+' businesses');
+  input.value='';
+}
+
+async function runBatch(){
+  if(!S.worker){ toast('Add your Worker URL in Setup first'); return; }
+  const items=parseBatchInput();
+  if(!items.length){ toast('Paste at least one business'); return; }
+
+  const btn=document.getElementById('batchBtn');
+  btn.disabled=true;
+  const prog=document.getElementById('bProg');
+  prog.innerHTML='<div class="card">'+items.map((it,i)=>
+    '<div class="bprow" id="bp'+i+'"><span>'+esc(it.name)+'</span><span class="st">waiting…</span></div>').join('')+'</div>';
+
+  // skip businesses already triaged (saves API calls)
+  const existing=await db.triage.toArray();
+  const seen=new Set(existing.map(t=>(t.name+'|'+t.location).toLowerCase()));
+
+  let done=0, added=0, skipped=0, failed=0;
+  for(let i=0;i<items.length;i++){
+    const it=items[i];
+    const row=document.getElementById('bp'+i);
+    const st=row.querySelector('.st');
+    btn.textContent='Triaging '+(i+1)+' of '+items.length+'…';
+
+    const key=(it.name+'|'+it.loc).toLowerCase();
+    if(seen.has(key)){
+      row.classList.add('done'); st.textContent='already checked — skipped';
+      skipped++; done++; continue;
+    }
+
+    row.classList.add('doing'); st.textContent='checking…';
+    try{
+      const r=await api('/triage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:it.name,location:it.loc})});
+      const res=r.result||{};
+      const rec={
+        name: res.name||it.name,
+        location: it.loc,
+        found: !!res.found,
+        address: res.address||null,
+        phone: res.phone||null,
+        emails: res.emails||[],
+        website: res.website||null,
+        website_ok: res.website_ok,
+        gbp: res.gbp||{found:false},
+        socials: res.socials||{},
+        category: res.category||null,
+        maps_url: res.maps_url||null,
+        business_status: res.business_status||null,
+        createdAt: Date.now()
+      };
+      rec.completeness=[rec.phone,(rec.emails||[]).length,rec.website,rec.gbp&&rec.gbp.found,Object.keys(rec.socials||{}).length].filter(Boolean).length;
+      await db.triage.add(rec);
+      seen.add(key);
+      row.classList.remove('doing'); row.classList.add('done');
+      st.textContent = res.found
+        ? ('✓ '+rec.completeness+'/5 — '+[rec.phone?'phone':null,(rec.emails||[]).length?'email':null,rec.website?'site':null].filter(Boolean).join(', ')||'✓ found')
+        : '✓ not found on Google';
+      added++;
+    }catch(e){
+      row.classList.remove('doing'); row.classList.add('fail');
+      st.textContent='failed: '+e.message.slice(0,60);
+      failed++;
+    }
+    done++;
+    if(i<items.length-1) await new Promise(r=>setTimeout(r,1300)); // gentle on rate limits
+  }
+  btn.disabled=false; btn.textContent='Triage all';
+  toast('Done — '+added+' checked'+(skipped?', '+skipped+' skipped':'')+(failed?', '+failed+' failed':''));
+  renderTriage();
+}
+
+function triageSegment(t){
+  const hasSoc=Object.keys(t.socials||{}).length>0;
+  const hasEmail=(t.emails||[]).length>0;
+  return {
+    nofound: !t.found,
+    nophone: t.found && !t.phone,
+    noemail: t.found && !hasEmail,
+    nosite: t.found && !t.website,
+    sitedown: t.found && t.website && t.website_ok===false,
+    nogbp: t.found && !(t.gbp&&t.gbp.found),
+    nosoc: t.found && !hasSoc,
+    mailonly: t.found && t.address && !t.phone && !hasEmail && !t.website,
+    complete: t.found && t.phone && hasEmail && t.website && (t.gbp&&t.gbp.found) && hasSoc
+  };
+}
+
+async function renderTriage(){
+  const all=await db.triage.toArray();
+  const chipsEl=document.getElementById('bChips');
+  const toolsEl=document.getElementById('bTools');
+  const out=document.getElementById('bOut');
+  if(!all.length){ chipsEl.innerHTML=''; toolsEl.style.display='none'; out.innerHTML=''; return; }
+
+  const segs=[
+    ['all','All'],['nophone','No phone'],['noemail','No email'],['nosite','No website'],
+    ['sitedown','Site down'],['nogbp','No GBP'],['nosoc','No social'],
+    ['mailonly','✉ Mail-only'],['complete','Complete'],['nofound','Not on Google']
+  ];
+  const counts={all:all.length};
+  for(const t of all){ const s=triageSegment(t); for(const k in s) if(s[k]) counts[k]=(counts[k]||0)+1; }
+  chipsEl.innerHTML=segs.filter(([k])=>k==='all'||counts[k]).map(([k,l])=>
+    '<button class="chip'+(bFilter===k?' on':'')+'" onclick="bFilter=\''+k+'\';renderTriage()">'+l+'<span class="n">'+(counts[k]||0)+'</span></button>').join('');
+  toolsEl.style.display='flex';
+
+  let list = bFilter==='all' ? all : all.filter(t=>triageSegment(t)[bFilter]);
+  const sort=document.getElementById('bSort').value;
+  if(sort==='lowc') list.sort((a,b)=>(a.completeness??0)-(b.completeness??0)||(b.gbp?.review_count??0)-(a.gbp?.review_count??0));
+  if(sort==='hic') list.sort((a,b)=>(b.completeness??0)-(a.completeness??0));
+  if(sort==='rating') list.sort((a,b)=>(b.gbp?.rating??0)-(a.gbp?.rating??0));
+  if(sort==='new') list.sort((a,b)=>b.createdAt-a.createdAt);
+
+  const sig=(ok,yes,no)=> ok ? '<span class="sig y">✓ '+yes+'</span>' : '<span class="sig n">✗ '+no+'</span>';
+  out.innerHTML = list.length ? list.map(t=>{
+    const hasEmail=(t.emails||[]).length>0, socKeys=Object.keys(t.socials||{});
+    return '<div class="trow card rise">'
+      +'<div class="lead-row"><span class="nm">'+esc(t.name)+'</span><span class="loc">'+esc(t.location)+'</span>'
+      +(t.gbp&&t.gbp.rating!=null?'<span class="loc">★ '+esc(t.gbp.rating)+(t.gbp.review_count!=null?' ('+esc(t.gbp.review_count)+')':'')+'</span>':'')
+      +'<span style="margin-left:auto;display:flex;gap:8px">'
+      +'<button class="btn btn-primary" style="width:auto;padding:8px 14px;font-size:14px" onclick="fullScanFromTriage('+t.id+')">Full scan</button>'
+      +'<button class="btn btn-ghost" style="color:var(--bad)" onclick="delTriage('+t.id+')">✕</button></span></div>'
+      +(!t.found
+        ? '<div class="sigrow"><span class="sig n">Not found on Google — check the spelling or run a full scan</span></div>'
+        : '<div class="sigrow">'
+          +sig(t.phone,'Phone','Phone')
+          +sig(hasEmail,'Email'+((t.emails||[]).length>1?' ×'+t.emails.length:''),'Email')
+          +(t.website ? (t.website_ok===false?'<span class="sig u">⚠ Site listed but unreachable</span>':'<span class="sig y">✓ Website</span>') : '<span class="sig n">✗ Website</span>')
+          +sig(t.gbp&&t.gbp.found,'GBP','GBP')
+          +(socKeys.length?'<span class="sig y">✓ Social: '+socKeys.map(esc).join(', ')+'</span>':'<span class="sig n">✗ Social</span>')
+          +(t.business_status&&t.business_status!=='OPERATIONAL'?'<span class="sig u">⚠ '+esc(t.business_status)+'</span>':'')
+          +'</div>'
+          +(t.phone||hasEmail?'<div class="addr">'+[t.phone?'📞 '+esc(t.phone):null,hasEmail?'✉️ '+esc(t.emails[0]):null].filter(Boolean).join(' · ')+'</div>':'')
+          +(t.address?'<div class="addr">📍 '+esc(t.address)+(triageSegment(t).mailonly?' <span class="sig u">Mail-only — send a letter</span>':'')+'</div>':''))
+      +'</div>';
+  }).join('') : '<div class="empty"><b>Nothing in this segment</b>Try another filter chip above.</div>';
+}
+
+async function delTriage(id){ await db.triage.delete(id); renderTriage(); }
+async function clearTriage(){
+  if(confirm('Clear all triage results? (Saved leads are not affected.)')){ await db.triage.clear(); bFilter='all'; renderTriage(); toast('Triage list cleared'); }
+}
+async function fullScanFromTriage(id){
+  const t=await db.triage.get(id); if(!t) return;
+  document.getElementById('inName').value=t.name;
+  document.getElementById('inLoc').value=t.location||'';
+  document.getElementById('inAddr').value=t.address||'';
+  document.getElementById('inUbi').value='';
+  showTab('scan');
+  runScan();
+}
+async function exportTriageCSV(){
+  const all=await db.triage.toArray();
+  const list=bFilter==='all'?all:all.filter(t=>triageSegment(t)[bFilter]);
+  if(!list.length){ toast('Nothing to export in this view'); return; }
+  const head=['Business','Location','Found','Phone','Email','Website','Site OK','GBP','Rating','Reviews','Socials','Address','Category','Completeness'];
+  const rows=list.map(t=>[t.name,t.location,t.found?'yes':'no',t.phone||'',(t.emails||[]).join(' '),t.website||'',t.website_ok===false?'DOWN':(t.website?'ok':''),(t.gbp&&t.gbp.found)?'yes':'no',t.gbp?.rating??'',t.gbp?.review_count??'',Object.keys(t.socials||{}).join(' '),t.address||'',t.category||'',t.completeness??'']);
+  const csv=[head,...rows].map(r=>r.map(c=>'"'+String(c??'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  download('leadradar-triage-'+bFilter+'.csv', csv, 'text/csv');
 }
 
 /* ================= Compare ================= */
