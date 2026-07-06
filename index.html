@@ -190,6 +190,24 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 90px}
 }
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 
+.scan-error{
+  margin-top:12px;padding:14px 16px;border-radius:var(--radius-sm);
+  background:var(--bad-bg);border:1px solid rgba(242,109,91,.35);
+  font-size:14px;line-height:1.5;color:var(--ink);
+}
+.scan-error .se-title{font-weight:600;color:var(--bad);margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.scan-error .se-msg{color:var(--ink-2)}
+.scan-error .se-actions{display:flex;align-items:center;gap:10px;margin-top:10px}
+.scan-error .btn-retry{
+  padding:7px 16px;border-radius:99px;border:1px solid var(--line-strong);
+  background:var(--glass-2);color:var(--ink);font-size:13px;cursor:pointer;transition:background .2s;
+}
+.scan-error .btn-retry:hover{background:var(--glass-solid)}
+.scan-error .btn-retry:disabled{opacity:.5;cursor:default}
+.scan-error .se-countdown{color:var(--muted);font-size:13px}
+.scan-error.quota{background:var(--mid-bg);border-color:rgba(240,160,50,.4)}
+.scan-error.quota .se-title{color:var(--signal-deep)}
+
 /* ============================================================
    Scan progress — radar sweep
    ============================================================ */
@@ -498,6 +516,7 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 90px}
     <div class="field"><label for="inUbi">UBI number (optional — exact match on WA state records)</label><input id="inUbi" placeholder="604 123 456" autocomplete="off"></div>
     <button class="btn btn-primary" id="scanBtn" onclick="runScan()">Run radar scan</button>
     <p class="hint" id="setupHint" style="display:none">Backend not configured yet — <a onclick="showTab('settings')">add your Worker URL in Setup</a> first.</p>
+    <div class="scan-error" id="scanError" style="display:none"></div>
   </div>
 
   <div class="progress card" id="progress">
@@ -690,6 +709,51 @@ function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 function copyText(txt){ navigator.clipboard.writeText(txt).then(()=>toast('Copied')); }
 function val(id){ const el=document.getElementById(id); return el?el.value:''; }
 
+/* ================= Scan error handling (rate limits / quota) ================= */
+let scanRetryTimer=null, scanRetryCountdown=null;
+function classifyScanError(msg){
+  const m=(msg||'').toLowerCase();
+  if(m.includes('daily') && m.includes('quota')) return 'daily';
+  if(m.includes('rate-limiting') || m.includes('per-minute') || m.includes('rate limit')) return 'rateLimit';
+  return 'other';
+}
+function clearScanError(){
+  clearTimeout(scanRetryTimer); clearInterval(scanRetryCountdown);
+  const el=document.getElementById('scanError'); el.style.display='none'; el.className='scan-error'; el.innerHTML='';
+}
+function showScanError(msg, force){
+  clearInterval(scanRetryCountdown); clearTimeout(scanRetryTimer);
+  const kind=classifyScanError(msg);
+  const el=document.getElementById('scanError');
+  el.style.display='block';
+  el.className='scan-error'+(kind==='daily'?' quota':'');
+
+  if(kind==='daily'){
+    el.innerHTML = `<div class="se-title">⏳ Daily quota reached</div>
+      <div class="se-msg">${esc(msg)}</div>
+      <div class="se-actions"><button class="btn-retry" onclick="runScan(${!!force})">Try anyway</button></div>`;
+  } else if(kind==='rateLimit'){
+    el.innerHTML = `<div class="se-title">🔄 Google is rate-limiting requests</div>
+      <div class="se-msg">${esc(msg)}</div>
+      <div class="se-actions">
+        <button class="btn-retry" id="seRetryBtn" onclick="clearScanError();runScan(${!!force})">Retry now</button>
+        <span class="se-countdown" id="seCountdown">Auto-retrying in 20s…</span>
+      </div>`;
+    let secs=20;
+    scanRetryCountdown=setInterval(()=>{
+      secs--;
+      const cd=document.getElementById('seCountdown');
+      if(cd) cd.textContent = secs>0 ? `Auto-retrying in ${secs}s…` : 'Retrying…';
+      if(secs<=0) clearInterval(scanRetryCountdown);
+    },1000);
+    scanRetryTimer=setTimeout(()=>{ clearScanError(); runScan(force); }, 20000);
+  } else {
+    el.innerHTML = `<div class="se-title">Scan failed</div>
+      <div class="se-msg">${esc(msg)}</div>
+      <div class="se-actions"><button class="btn-retry" onclick="clearScanError();runScan(${!!force})">Retry</button></div>`;
+  }
+}
+
 /* ================= API ================= */
 function step(n, state){
   const el=document.getElementById('ps'+n);
@@ -713,6 +777,7 @@ async function runScan(force){
   if(!name||!loc){ toast('Enter business name and location'); return; }
 
   const btn=document.getElementById('scanBtn'); btn.disabled=true; btn.textContent='Scanning…';
+  clearScanError();
   document.getElementById('dossier').classList.remove('on');
   const prog=document.getElementById('progress'); prog.classList.add('on');
   [1,2,3].forEach(n=>step(n,null)); step(1,'doing');
@@ -735,7 +800,7 @@ async function runScan(force){
     renderDossier(current, false);
     setTimeout(()=>prog.classList.remove('on'), 600);
   }catch(e){
-    toast('Scan failed: '+e.message);
+    showScanError(e.message, force);
     prog.classList.remove('on');
   }finally{
     btn.disabled=false; btn.textContent='Run radar scan';
