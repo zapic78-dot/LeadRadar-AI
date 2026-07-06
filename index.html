@@ -164,7 +164,9 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 90px}
   border-radius:var(--radius-sm);padding:13px 22px;font-weight:600;font-size:15px;
   transition:transform .15s var(--ease),box-shadow .2s,background .2s,border-color .2s;
 }
+.btn:hover{transform:translateY(-1px)}
 .btn:active{transform:scale(.97)}
+:focus-visible{outline:2px solid var(--signal);outline-offset:2px;border-radius:6px}
 .btn-primary{background:linear-gradient(180deg,#F7AE45,var(--signal));color:#1B1204;width:100%;box-shadow:0 6px 18px rgba(240,160,50,.28)}
 .btn-primary:hover{box-shadow:0 8px 24px rgba(240,160,50,.4)}
 .btn-primary:disabled{background:var(--chip);color:var(--muted);box-shadow:none;cursor:default}
@@ -271,6 +273,7 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 90px}
   border:1px solid var(--line);border-left-width:4px;border-radius:10px;
   padding:12px 14px;margin:10px 0;background:var(--glass);
 }
+.issue.pr-Critical{border-left-color:#D6453A;background:linear-gradient(90deg,var(--bad-bg),var(--glass) 40%)}
 .issue.pr-High{border-left-color:var(--bad)}
 .issue.pr-Medium{border-left-color:var(--signal)}
 .issue.pr-Low{border-left-color:var(--petrol)}
@@ -278,6 +281,7 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 90px}
 .issue-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .issue-top b{font-size:15px}
 .issue-pr{margin-left:auto;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:2px 10px;border-radius:99px}
+.issue.pr-Critical .issue-pr{background:#D6453A;color:#fff}
 .issue.pr-High .issue-pr{background:var(--bad-bg);color:var(--bad)}
 .issue.pr-Medium .issue-pr{background:var(--mid-bg);color:var(--signal-deep)}
 :root[data-theme="dark"] .issue.pr-Medium .issue-pr{color:var(--signal)}
@@ -286,6 +290,27 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 90px}
 .issue p{font-size:14px;color:var(--ink-2);margin-top:5px}
 .issue .fx{font-size:13px;margin-top:6px;color:var(--muted)}
 .issue .fx b{color:var(--petrol);font-size:13px}
+
+/* ---------- AI Sales Coach ---------- */
+.coach-open{
+  font-size:15px;font-style:italic;background:var(--mid-bg);
+  border-left:3px solid var(--signal);padding:11px 13px;border-radius:0 10px 10px 0;margin-bottom:10px;
+}
+.coach-kv{display:flex;gap:10px;padding:6px 0;font-size:14px;align-items:baseline;border-bottom:1px dashed var(--line)}
+.coach-kv:last-of-type{border:none}
+.coach-kv b{flex:none;width:104px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.obj{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0;background:var(--glass);font-size:14px}
+.obj b{color:var(--bad);font-weight:600}
+.obj p{margin-top:4px;color:var(--ink-2)}
+.obj p b{color:var(--good)}
+.closebar{margin:12px 0 4px}
+.closebar .lbl{display:flex;justify-content:space-between;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.closebar .track{height:10px;background:var(--chip);border-radius:99px;overflow:hidden}
+.closebar .fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--signal-deep),var(--good));transition:width 1s var(--ease)}
+.calc-note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.45}
+
+/* ---------- Print branding ---------- */
+.print-head,.print-foot{display:none}
 
 /* ---------- Score dial ---------- */
 .dial-wrap{text-align:center;margin-top:20px}
@@ -408,17 +433,31 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 90px}
 .err-msg{color:var(--bad);font-size:14px;margin-top:8px}
 
 /* ============================================================
-   Print — clean audit report
+   Print — branded client-ready audit report
    ============================================================ */
 @media print{
-  header,nav,.dh-actions,.scan-card,.scan-hero,.progress,.hint,.copyrow,.theme-btn,.ocsub,.ocnum,.octo,.editable-note{display:none!important}
-  body{background:#fff;color:#101B22}
+  header,nav,.dh-actions,.scan-card,.scan-hero,.progress,.hint,.copyrow,.theme-btn,.ocsub,.ocnum,.octo,.editable-note,.no-print{display:none!important}
+  body{background:#fff;color:#101B22;font-size:13px}
   body::before{display:none}
   .dossier{display:block!important}
-  .card,.dossier-body,.sec-body,.issue,.soc{background:#fff!important;border-color:#D8E0E2!important;box-shadow:none!important;backdrop-filter:none!important}
+  .print-head{
+    display:flex!important;align-items:center;gap:12px;padding:14px 4px;margin-bottom:8px;
+    border-bottom:3px solid #E8930C;-webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  .print-head .ph-brand{font-family:'Barlow Condensed';font-size:20px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#101B22}
+  .print-head .ph-sub{font-size:11px;color:#65757D;letter-spacing:.06em}
+  .print-head .ph-right{margin-left:auto;text-align:right;font-size:11px;color:#65757D;line-height:1.5}
+  .print-foot{
+    display:block!important;margin-top:18px;padding-top:10px;border-top:1px solid #D8E0E2;
+    font-size:11px;color:#65757D;text-align:center;
+  }
+  .card,.dossier-body,.sec-body,.issue,.soc,.obj{background:#fff!important;border-color:#D8E0E2!important;box-shadow:none!important;backdrop-filter:none!important}
   .dossier-head{border-radius:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .issue,.sec{break-inside:avoid;page-break-inside:avoid}
+  .issue.pr-Critical .issue-pr,.pill,.sig,.stamp,.bar .fill,.closebar .fill,.dial svg{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .ocbox{border:1px solid #D8E0E2;background:#fff;min-height:0}
   .dgrid{grid-template-columns:1fr}
+  a{color:#14555A;text-decoration:none}
 }
 </style>
 </head>
@@ -704,27 +743,36 @@ async function runScan(force){
 }
 
 /* ================= Issue audit engine ================= */
-/* Builds short 2–3 line issues from the dossier data. If the worker ever
-   returns analysis.website_issues / analysis.gbp_audit arrays, those win. */
+/* Four categories. Worker-provided arrays (analysis.website_issues, gbp_audit,
+   seo_issues, performance_issues) always win; deterministic fallbacks cover
+   older saved leads that were analyzed before the upgrade. */
+function normPr(p){
+  p=String(p||'Medium');
+  const m={critical:'Critical',high:'High',medium:'Medium',low:'Low',good:'Good'};
+  return m[p.toLowerCase()]||'Medium';
+}
+function fromWorker(arr){
+  return (arr||[]).map(x=>({name:x.name||x.issue||'Issue', why:x.explanation||x.why||'', impact:x.impact||'', fix:x.fix||x.recommendation||'', pr:normPr(x.priority)}));
+}
 function buildIssues(d){
   const p=d.profile||{}, a=d.analysis||{}, w=d.whois, ev=d.evidence||{};
   const gb=p.google_business||{}, sc=a.scores||{};
-  const web=[], gbp=[];
+  let web=[], gbp=[], seo=[], perf=[];
   const site = normSite(p.website);
 
-  // Worker-provided structured issues take priority (future-proof)
+  // ---- Website ----
   if(Array.isArray(a.website_issues) && a.website_issues.length){
-    a.website_issues.forEach(x=>web.push({name:x.name||x.issue||'Issue', why:x.explanation||x.why||'', impact:x.impact||'', fix:x.fix||x.recommendation||'', pr:x.priority||'Medium'}));
+    web=fromWorker(a.website_issues);
   } else {
     if(!site){
-      web.push({name:'No website', pr:'High',
+      web.push({name:'No website', pr:'Critical',
         why:'Nothing comes up when customers try to visit them online. Every competitor with even a basic site wins that click.',
         impact:'Losing nearly every customer who researches before calling.',
         fix:'Starter website — usually the fastest close on the list.'});
     } else {
       const status=(p.website_status||'').toLowerCase();
       if(/down|broken|error|unreach/.test(status)){
-        web.push({name:'Website down or broken', pr:'High',
+        web.push({name:'Website down or broken', pr:'Critical',
           why:'The site did not respond properly during the scan. Visitors are hitting an error instead of a business.',
           impact:'Paying for a domain that actively turns customers away.',
           fix:'Site rescue / rebuild — urgent and easy to demonstrate.'});
@@ -741,48 +789,27 @@ function buildIssues(d){
           impact:'First impression says "small and behind," even if the business is solid.',
           fix:'Website redesign with mobile-first layout.'});
       }
-      if(sc.seo!=null && sc.seo<=4){
-        web.push({name:'Weak SEO', pr:'Medium',
-          why:'SEO scored '+sc.seo+'/10 — missing or thin titles, descriptions, and local keywords.',
-          impact:'Invisible on Google for the exact services they sell.',
-          fix:'Local SEO package: on-page fixes + Google ranking work.'});
-      } else if(p.seo_signals && /weak|poor|missing|none|no meta/i.test(p.seo_signals)){
-        web.push({name:'Weak SEO signals', pr:'Medium',
-          why:(String(p.seo_signals).split(/[.;]/)[0]||'SEO basics are missing.').trim()+'.',
-          impact:'Competitors outrank them for their own service keywords.',
-          fix:'On-page SEO cleanup + Google Business optimization.'});
-      }
-      if(ev && ev.contact_page===null || (ev && !ev.contact_page && !((p.emails||[]).length))){
+      if((ev && ev.contact_page===null) || (ev && !ev.contact_page && !((p.emails||[]).length))){
         web.push({name:'No clear contact path', pr:'Medium',
           why:'The scan found no contact page and no public email on the site.',
           impact:'Ready-to-buy visitors have no easy way to reach out.',
           fix:'Contact page with a form + click-to-call button.'});
-      } else if(!(p.emails||[]).length && !(ev.emails||[]).length){
-        web.push({name:'No public email', pr:'Medium',
-          why:'No business email is published anywhere the scan could find.',
-          impact:'Looks less established, and quote requests go nowhere.',
-          fix:'Branded email (e.g. info@theirdomain.com) + visible contact info.'});
       }
       if(/wix|weebly|godaddy builder|site builder/i.test(p.tech_stack||'')){
         web.push({name:'DIY site builder', pr:'Medium',
-          why:'The site runs on '+esc((p.tech_stack||'').split(',')[0])+' — typically a self-made site with limited SEO control.',
+          why:'The site runs on '+((p.tech_stack||'').split(',')[0])+' — typically a self-made site with limited SEO control.',
           impact:'Caps how far they can grow in search and speed.',
           fix:'Migration to a professional, fast, SEO-ready build.'});
-      }
-      if(w && w.found && w.age_years!=null && w.age_years<1){
-        web.push({name:'Brand-new domain', pr:'Low',
-          why:'The domain is under a year old — the online presence is just getting started.',
-          impact:'Little search authority yet; easy to shape early.',
-          fix:'Foundation package: SEO setup + Google Business from day one.'});
       }
     }
   }
 
+  // ---- Google Business ----
   if(Array.isArray(a.gbp_audit) && a.gbp_audit.length){
-    a.gbp_audit.forEach(x=>gbp.push({name:x.name||x.issue||'Issue', why:x.explanation||x.why||'', impact:x.impact||'', fix:x.fix||x.recommendation||'', pr:x.priority||'Medium'}));
+    gbp=fromWorker(a.gbp_audit);
   } else {
     if(!gb.found){
-      gbp.push({name:'No Google Business Profile', pr:'High',
+      gbp.push({name:'No Google Business Profile', pr:'Critical',
         why:'The scan found no profile on Google Maps. When locals search the service + city, this business simply isn\u2019t there.',
         impact:'Missing the single biggest free source of local customers.',
         fix:'GBP setup + verification — quick win with visible results.'});
@@ -801,13 +828,13 @@ function buildIssues(d){
       }
       if(gb.hours_listed===false){
         gbp.push({name:'Business hours missing', pr:'Low',
-          why:'No hours are listed on the profile, so Google can\u2019t show "Open now" — a filter many customers use.',
+          why:'No hours are listed, so Google can\u2019t show "Open now" — a filter many customers use.',
           impact:'Dropped from "open now" searches entirely.',
           fix:'Complete the profile: hours, services, photos, description.'});
       }
       if(!gb.category){
         gbp.push({name:'No category set', pr:'Low',
-          why:'The profile has no clear primary category, which is the #1 local ranking factor on Google Maps.',
+          why:'No clear primary category — the #1 local ranking factor on Google Maps.',
           impact:'Weak map ranking even in their own neighborhood.',
           fix:'Set precise primary + secondary categories.'});
       }
@@ -820,10 +847,50 @@ function buildIssues(d){
     }
   }
 
-  const order={High:0,Medium:1,Low:2,Good:3};
-  web.sort((x,y)=>(order[x.pr]??1)-(order[y.pr]??1));
-  gbp.sort((x,y)=>(order[x.pr]??1)-(order[y.pr]??1));
-  return {web:web.slice(0,6), gbp:gbp.slice(0,6)};
+  // ---- SEO ----
+  if(Array.isArray(a.seo_issues) && a.seo_issues.length){
+    seo=fromWorker(a.seo_issues);
+  } else {
+    if(sc.seo!=null && sc.seo<=4){
+      seo.push({name:'Weak search visibility', pr:'High',
+        why:'SEO scored '+sc.seo+'/10 — missing or thin titles, descriptions, and local keywords.',
+        impact:'Invisible on Google for the exact services they sell.',
+        fix:'Local SEO package: on-page fixes + Google ranking work.'});
+    } else if(p.seo_signals && /weak|poor|missing|none|not visible|low visibility/i.test(p.seo_signals)){
+      seo.push({name:'Weak SEO signals', pr:'Medium',
+        why:(String(p.seo_signals).split(/[.;]/)[0]||'SEO basics are missing').trim()+'.',
+        impact:'Competitors outrank them for their own service keywords.',
+        fix:'On-page SEO cleanup + Google Business optimization.'});
+    }
+    if(w && w.found && w.age_years!=null && w.age_years<1){
+      seo.push({name:'Brand-new domain', pr:'Low',
+        why:'The domain is under a year old — little search authority has built up yet.',
+        impact:'Will take months to rank without help; easy to shape early.',
+        fix:'SEO foundation package from day one.'});
+    }
+  }
+
+  // ---- Performance ----
+  if(Array.isArray(a.performance_issues) && a.performance_issues.length){
+    perf=fromWorker(a.performance_issues);
+  } else if(site){
+    const ms=p.mobile_speed;
+    if(ms!=null && ms<50){
+      perf.push({name:'Slow mobile site ('+ms+'/100)', pr:ms<30?'Critical':'High',
+        why:'Google PageSpeed measured '+ms+'/100 on mobile. Most visitors are on phones and won\u2019t wait.',
+        impact:'Over half of mobile visitors abandon slow sites — and Google ranks them lower.',
+        fix:'Speed optimization: image compression, caching, modern hosting.'});
+    } else if(ms!=null && ms<75){
+      perf.push({name:'Mobile speed could be better ('+ms+'/100)', pr:'Medium',
+        why:'PageSpeed measured '+ms+'/100 on mobile — usable, but leaving ranking points on the table.',
+        impact:'Faster competitors get the edge in both rankings and conversions.',
+        fix:'Targeted speed tune-up.'});
+    }
+  }
+
+  const order={Critical:0,High:1,Medium:2,Low:3,Good:4};
+  for(const arr of [web,gbp,seo,perf]) arr.sort((x,y)=>(order[x.pr]??2)-(order[y.pr]??2));
+  return {web:web.slice(0,6), gbp:gbp.slice(0,6), seo:seo.slice(0,5), perf:perf.slice(0,5)};
 }
 
 function issueHtml(x){
@@ -922,8 +989,14 @@ function renderDossier(d, saved){
   const addrRow = ev && ev.address
     ? '<div class="kv"><b>Address</b><span>'+esc(ev.address.value)+' '+vpill(ev.address.verified)+'<small class="src" style="display:block">'+esc(ev.address.source)+'</small></span></div>'
     : kv('Address', esc(p.address)||'<span class="pill no">Not Found</span>');
-  const bars=[['Website',sc.website],['SEO',sc.seo],['Google Business',sc.google_business],['Social Media',sc.social_media],['Reachability',sc.reachability]]
-    .map(x=>'<div class="bar"><div class="lbl"><span>'+x[0]+'</span><span class="mono">'+(x[1]??'–')+'/10</span></div><div class="track"><div class="fill" style="width:'+((x[1]||0)*10)+'%"></div></div></div>').join('');
+  const scoreDefs=[
+    ['Website','website'],['SEO','seo'],['Google Business','google_business'],
+    ['Reviews','reviews'],['Mobile Experience','mobile_experience'],['Branding','branding'],
+    ['Performance','performance'],['Social Media','social_media'],['Reachability','reachability']
+  ];
+  const bars=scoreDefs.filter(x=>sc[x[1]]!=null)
+    .map(x=>'<div class="bar"><div class="lbl"><span>'+x[0]+'</span><span class="mono">'+(sc[x[1]]??'–')+'/10</span></div><div class="track"><div class="fill" style="width:'+((sc[x[1]]||0)*10)+'%"></div></div></div>').join('');
+  const calcNote='<div class="calc-note"><b>How the score works:</b> each bar rates their <i>current</i> quality (10 = excellent). The big number is lead value for you — a solid business (good reviews, reachable, years operating) with weak digital presence scores <b>high</b>, because there\u2019s real work to sell. A weak or unreachable business scores low.</div>';
   const recos=(a.recommended_services||[]).map(x=>'<div class="reco"><b>'+esc(x.service)+'</b> — '+esc(x.reason)+'</div>').join('');
 
   // Executive summary pieces
@@ -941,10 +1014,18 @@ function renderDossier(d, saved){
 
   const emailSubj = a.cold_email ? (a.cold_email.subject||'') : '';
   const emailBody = a.cold_email ? (a.cold_email.body||'') : '';
+  const fuSubj = a.follow_up_email ? (a.follow_up_email.subject||'') : '';
+  const fuBody = a.follow_up_email ? (a.follow_up_email.body||'') : '';
+  const coach = a.sales_coach || null;
   const firstEmail = (p.emails&&p.emails[0]) || '';
   const firstPhone = (p.phones&&p.phones[0]) || '';
 
   document.getElementById('dossier').innerHTML = `
+  <div class="print-head">
+    <svg width="34" height="34" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#101B22"/><circle cx="50" cy="50" r="30" fill="none" stroke="#E8930C" stroke-width="4"/><circle cx="50" cy="50" r="14" fill="none" stroke="#E8930C" stroke-width="4"/><circle cx="66" cy="38" r="6" fill="#E8930C"/></svg>
+    <div><div class="ph-brand">Zapic Digital US</div><div class="ph-sub">Digital Presence Audit — prepared for ${esc(p.business_name||q.name)}</div></div>
+    <div class="ph-right">zapicdigitalus.com<br>zapic78@gmail.com · Kent, WA<br>${new Date().toLocaleDateString()}</div>
+  </div>
   <div class="dossier-head">
     <div>
       <div class="dh-name">${esc(p.business_name||q.name)}</div>
@@ -965,6 +1046,14 @@ function renderDossier(d, saved){
       <div class="sec rise"><span class="sec-tab">Google Business Audit</span><div class="sec-body">
         ${issues.gbp.map(issueHtml).join('')}
       </div></div>
+
+      ${issues.seo.length?`<div class="sec rise"><span class="sec-tab">SEO Issues</span><div class="sec-body">
+        ${issues.seo.map(issueHtml).join('')}
+      </div></div>`:''}
+
+      ${issues.perf.length?`<div class="sec rise"><span class="sec-tab">Performance</span><div class="sec-body">
+        ${issues.perf.map(issueHtml).join('')}
+      </div></div>`:''}
 
       <div class="sec rise"><span class="sec-tab">Executive Summary</span><div class="sec-body">
         ${a.why?'<div class="why" style="margin-top:0">'+esc(a.why)+'</div>':''}
@@ -998,7 +1087,17 @@ function renderDossier(d, saved){
         ${gb.found?kv('Hours', gb.hours_listed?'<span class="pill ok">Listed</span>':'<span class="pill no">Not listed</span>'):''}
       </div></div>
 
-      <div class="sec rise"><span class="sec-tab">Social</span><div class="sec-body"><div class="socgrid">
+      <div class="sec rise"><span class="sec-tab">Social Media Presence</span><div class="sec-body">
+        ${(function(){
+          const plats=['facebook','instagram','linkedin','yelp','bbb','youtube'];
+          const have=plats.filter(k=>p[k]&&p[k].found);
+          const miss=plats.filter(k=>!(p[k]&&p[k].found));
+          return '<div class="kv" style="padding-bottom:10px;border-bottom:1px dashed var(--line);margin-bottom:8px"><b>Coverage</b><span>'
+            +(have.length?'<span class="pill ok">'+have.length+' of 6 platforms</span> ':'<span class="pill no">Nothing found</span> ')
+            +(miss.length&&miss.length<6?'<span style="color:var(--muted);font-size:13px">missing: '+miss.join(', ')+'</span>':'')
+            +'</span></div>';
+        })()}
+        <div class="socgrid">
         ${soc('Facebook','facebook', p.facebook, ev, p.facebook&&p.facebook.followers?esc(p.facebook.followers)+' followers':'')}
         ${soc('Instagram','instagram', p.instagram, ev, p.instagram&&p.instagram.followers?esc(p.instagram.followers)+' followers':'')}
         ${soc('LinkedIn','linkedin', p.linkedin, ev,'')}
@@ -1037,37 +1136,79 @@ function renderDossier(d, saved){
         ${dial(a.overall)}
         ${verdict?'<div class="stamp '+vClass+'">'+esc(verdict)+(vClass==='hi'&&!verdict.includes('LEAD')?' LEAD':'')+'</div>':''}
       </div>
-      <div class="bars rise">${bars}</div>
+      <div class="bars rise">${bars}${calcNote}</div>
+
+      ${coach?`<div class="sec rise no-print"><span class="sec-tab">AI Sales Coach</span><div class="sec-body">
+        ${coach.opening_line?'<div class="coach-open">\u201c'+esc(coach.opening_line)+'\u201d <button class="btn btn-ghost" style="padding:4px 10px;font-size:12px;margin-left:6px" onclick="copyText('+JSON.stringify(esc(coach.opening_line)).replace(/"/g,'&quot;')+')">Copy</button></div>':''}
+        ${coach.biggest_problem?'<div class="coach-kv"><b>#1 Problem</b><span>'+esc(coach.biggest_problem)+'</span></div>':''}
+        ${coach.first_service?'<div class="coach-kv"><b>Lead with</b><span>'+esc(coach.first_service)+'</span></div>':''}
+        ${coach.best_channel?'<div class="coach-kv"><b>Best channel</b><span><span class="pill mid">'+esc(coach.best_channel)+'</span></span></div>':''}
+        ${coach.close_probability!=null?'<div class="closebar"><div class="lbl"><span>Chance of closing</span><span class="mono">'+esc(coach.close_probability)+'%</span></div><div class="track"><div class="fill" style="width:'+Math.max(0,Math.min(100,coach.close_probability))+'%"></div></div></div>':''}
+        ${(coach.objections&&coach.objections.length)?'<div style="margin-top:10px"><div class="lbl" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:2px">Likely objections</div>'+coach.objections.slice(0,3).map(o=>'<div class="obj"><b>\u201c'+esc(o.objection)+'\u201d</b><p><b>\u2192</b> '+esc(o.response)+'</p></div>').join('')+'</div>':''}
+      </div></div>`:(saved?'<div class="sec rise no-print"><span class="sec-tab">AI Sales Coach</span><div class="sec-body"><p style="font-size:14px;color:var(--muted)">This lead was analyzed before the Sales Coach existed. Hit <b>\u21bb Regenerate</b> below to get coaching, objection handling, and the full outreach suite.</p></div></div>':'')}
 
       ${recos?'<div class="sec rise"><span class="sec-tab">Pitch These</span><div class="sec-body">'+recos+'</div></div>':''}
 
-      ${a.cold_email?`<div class="sec rise"><span class="sec-tab">Cold Email</span>
-        <p class="editable-note">Everything below is editable — tweak it, then copy or open in Gmail.</p>
+      ${a.cold_email?`<div class="sec rise no-print"><span class="sec-tab">Cold Email</span>
+        <p class="editable-note">Everything below is editable — tweak it, then copy or send.</p>
         <input class="octo" id="emTo" placeholder="To: email address" value="${esc(firstEmail)}">
         <input class="ocsub" id="emSub" placeholder="Subject" value="${esc(emailSubj)}">
         <textarea class="ocbox" id="emBody">${esc(emailBody)}</textarea>
         <div class="copyrow">
           <button class="btn btn-dark" onclick="copyEmail()">Copy</button>
-          <button class="btn btn-ghost" onclick="openGmail()">Open Gmail</button>
+          <button class="btn btn-ghost" onclick="openGmail()">Gmail</button>
+          <button class="btn btn-ghost" onclick="openOutlook()">Outlook</button>
           <button class="btn btn-ghost" onclick="openMailto()">Mail app</button>
           <button class="btn btn-ghost" onclick="downloadOutreach()">Download</button>
           <button class="btn btn-ghost" id="regenBtn" onclick="regenOutreach()">↻ Regenerate</button>
         </div></div>`:''}
 
-      ${a.cold_sms?`<div class="sec rise"><span class="sec-tab">Text Message</span>
-        <p class="editable-note">Edit freely — the send button uses your edited version.</p>
-        <textarea class="ocbox" id="smsBody" style="min-height:110px">${esc(a.cold_sms)}</textarea>
+      ${a.follow_up_email?`<div class="sec rise no-print"><span class="sec-tab">Follow-Up Email</span>
+        <input class="ocsub" id="fuSub" placeholder="Subject" value="${esc(fuSubj)}">
+        <textarea class="ocbox" id="fuBody" style="min-height:120px">${esc(fuBody)}</textarea>
+        <div class="copyrow">
+          <button class="btn btn-dark" onclick="copyText('Subject: '+val('fuSub')+'\\n\\n'+val('fuBody'))">Copy</button>
+          <button class="btn btn-ghost" onclick="openGmail('fuSub','fuBody')">Gmail</button>
+          <button class="btn btn-ghost" onclick="openOutlook('fuSub','fuBody')">Outlook</button>
+        </div></div>`:''}
+
+      ${a.cold_sms?`<div class="sec rise no-print"><span class="sec-tab">Text Message</span>
+        <textarea class="ocbox" id="smsBody" style="min-height:100px">${esc(a.cold_sms)}</textarea>
         <input class="ocnum" id="smsNum" placeholder="Phone number to text" value="${esc(firstPhone)}" style="margin-top:8px">
         <div class="copyrow">
           <button class="btn btn-dark" onclick="copyText(val('smsBody'))">Copy</button>
           <button class="btn btn-ghost" onclick="openSms()">Open in Messages</button>
         </div></div>`:''}
 
-      ${a.call_opener?`<div class="sec rise"><span class="sec-tab">Call Opener</span>
-        <textarea class="ocbox" id="callBody" style="min-height:110px">${esc(a.call_opener)}</textarea>
-        <div class="copyrow"><button class="btn btn-dark" onclick="copyText(val('callBody'))">Copy script</button></div></div>`:''}
+      ${a.whatsapp_message?`<div class="sec rise no-print"><span class="sec-tab">WhatsApp</span>
+        <textarea class="ocbox" id="waBody" style="min-height:100px">${esc(a.whatsapp_message)}</textarea>
+        <input class="ocnum" id="waNum" placeholder="WhatsApp number (with country code)" value="${esc(firstPhone)}" style="margin-top:8px">
+        <div class="copyrow">
+          <button class="btn btn-dark" onclick="copyText(val('waBody'))">Copy</button>
+          <button class="btn btn-ghost" onclick="openWhatsApp()">Open WhatsApp</button>
+        </div></div>`:''}
+
+      ${a.linkedin_message?`<div class="sec rise no-print"><span class="sec-tab">LinkedIn Message</span>
+        <textarea class="ocbox" id="liBody" style="min-height:100px">${esc(a.linkedin_message)}</textarea>
+        <div class="copyrow">
+          <button class="btn btn-dark" onclick="copyText(val('liBody'))">Copy</button>
+          ${(p.linkedin&&p.linkedin.found&&p.linkedin.url)?'<a class="btn btn-ghost" style="text-decoration:none" href="'+esc(normSite(p.linkedin.url))+'" target="_blank" rel="noopener">Open their LinkedIn</a>':''}
+        </div></div>`:''}
+
+      ${a.call_opener?`<div class="sec rise no-print"><span class="sec-tab">Call Opener</span>
+        <textarea class="ocbox" id="callBody" style="min-height:100px">${esc(a.call_opener)}</textarea>
+        <div class="copyrow"><button class="btn btn-dark" onclick="copyText(val('callBody'))">Copy script</button>
+        ${firstPhone?'<a class="btn btn-ghost" style="text-decoration:none" href="tel:'+esc(firstPhone.replace(/[^\d+]/g,''))+'">Call now</a>':''}</div></div>`:''}
+
+      ${a.sales_proposal?`<div class="sec rise no-print"><span class="sec-tab">Mini Proposal</span>
+        <textarea class="ocbox" id="propBody" style="min-height:170px">${esc(a.sales_proposal)}</textarea>
+        <div class="copyrow">
+          <button class="btn btn-dark" onclick="copyText(val('propBody'))">Copy</button>
+          <button class="btn btn-ghost" onclick="download('proposal-'+((current&&current.profile&&current.profile.business_name)||'lead').replace(/[^a-z0-9]+/gi,'-').toLowerCase()+'.txt', val('propBody'), 'text/plain');toast('Downloaded')">Download</button>
+        </div></div>`:''}
     </div>
-  </div></div>`;
+  </div></div>
+  <div class="print-foot">Prepared by Zapic Digital US · Web Development · SEO · Google Business Optimization · AI Automation · zapicdigitalus.com · zapic78@gmail.com</div>`;
 
   const box=document.getElementById('dossier');
   box.classList.add('on');
@@ -1078,9 +1219,14 @@ function renderDossier(d, saved){
 function copyEmail(){
   copyText('Subject: '+val('emSub')+'\n\n'+val('emBody'));
 }
-function openGmail(){
+function openGmail(subId,bodyId){
   const u='https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(val('emTo'))
-    +'&su='+encodeURIComponent(val('emSub'))+'&body='+encodeURIComponent(val('emBody'));
+    +'&su='+encodeURIComponent(val(subId||'emSub'))+'&body='+encodeURIComponent(val(bodyId||'emBody'));
+  window.open(u,'_blank','noopener');
+}
+function openOutlook(subId,bodyId){
+  const u='https://outlook.live.com/mail/deeplink/compose?to='+encodeURIComponent(val('emTo'))
+    +'&subject='+encodeURIComponent(val(subId||'emSub'))+'&body='+encodeURIComponent(val(bodyId||'emBody'));
   window.open(u,'_blank','noopener');
 }
 function openMailto(){
@@ -1091,12 +1237,22 @@ function openSms(){
   if(!n){ toast('Enter a phone number first'); return; }
   location.href='sms:'+n+'?body='+encodeURIComponent(val('smsBody'));
 }
+function openWhatsApp(){
+  let n=val('waNum').replace(/[^\d]/g,'');
+  if(!n){ toast('Enter a phone number first'); return; }
+  if(n.length===10) n='1'+n; // default US country code
+  window.open('https://wa.me/'+n+'?text='+encodeURIComponent(val('waBody')),'_blank','noopener');
+}
 function downloadOutreach(){
   const name=(current&&current.profile&&current.profile.business_name)||'lead';
-  const txt='TO: '+val('emTo')+'\nSUBJECT: '+val('emSub')+'\n\n'+val('emBody')
-    +(document.getElementById('smsBody')?'\n\n--- SMS ---\n'+val('smsBody'):'')
-    +(document.getElementById('callBody')?'\n\n--- CALL SCRIPT ---\n'+val('callBody'):'');
-  download('outreach-'+name.replace(/[^a-z0-9]+/gi,'-').toLowerCase()+'.txt', txt, 'text/plain');
+  const parts=['TO: '+val('emTo')+'\nSUBJECT: '+val('emSub')+'\n\n'+val('emBody')];
+  if(document.getElementById('fuBody')) parts.push('--- FOLLOW-UP ---\nSUBJECT: '+val('fuSub')+'\n\n'+val('fuBody'));
+  if(document.getElementById('smsBody')) parts.push('--- SMS ---\n'+val('smsBody'));
+  if(document.getElementById('waBody')) parts.push('--- WHATSAPP ---\n'+val('waBody'));
+  if(document.getElementById('liBody')) parts.push('--- LINKEDIN ---\n'+val('liBody'));
+  if(document.getElementById('callBody')) parts.push('--- CALL SCRIPT ---\n'+val('callBody'));
+  if(document.getElementById('propBody')) parts.push('--- PROPOSAL ---\n'+val('propBody'));
+  download('outreach-'+name.replace(/[^a-z0-9]+/gi,'-').toLowerCase()+'.txt', parts.join('\n\n'), 'text/plain');
   toast('Downloaded');
 }
 async function regenOutreach(){
