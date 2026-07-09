@@ -1165,6 +1165,8 @@ function renderDossier(d, saved){
           <button class="btn btn-ghost" onclick="openMailto()">Mail app</button>
           <button class="btn btn-ghost" onclick="downloadOutreach()">Download</button>
           <button class="btn btn-ghost" id="regenBtn" onclick="regenOutreach()">↻ Regenerate</button>
+          <button class="btn btn-ghost" id="polishBtn" onclick="polishEmail()">✨ Fix with AI</button>
+          <button class="btn btn-primary" id="sendEmailBtn" onclick="sendEmailNow()">Send</button>
         </div></div>`:''}
 
       ${a.follow_up_email?`<div class="sec rise no-print"><span class="sec-tab">Follow-Up Email</span>
@@ -1174,6 +1176,8 @@ function renderDossier(d, saved){
           <button class="btn btn-dark" onclick="copyText('Subject: '+val('fuSub')+'\\n\\n'+val('fuBody'))">Copy</button>
           <button class="btn btn-ghost" onclick="openGmail('fuSub','fuBody')">Gmail</button>
           <button class="btn btn-ghost" onclick="openOutlook('fuSub','fuBody')">Outlook</button>
+          <button class="btn btn-ghost" id="fuRegenBtn" onclick="regenFollowup()">↻ Match to cold email</button>
+          <button class="btn btn-primary" id="sendFuBtn" onclick="sendFollowupNow()">Send</button>
         </div></div>`:''}
 
       ${a.cold_sms?`<div class="sec rise no-print"><span class="sec-tab">Text Message</span>
@@ -1182,6 +1186,7 @@ function renderDossier(d, saved){
         <div class="copyrow">
           <button class="btn btn-dark" onclick="copyText(val('smsBody'))">Copy</button>
           <button class="btn btn-ghost" onclick="openSms()">Open in Messages</button>
+          <button class="btn btn-primary" id="sendSmsBtn" onclick="sendSmsNow()">Send</button>
         </div></div>`:''}
 
       ${a.whatsapp_message?`<div class="sec rise no-print"><span class="sec-tab">WhatsApp</span>
@@ -1269,6 +1274,67 @@ async function regenOutreach(){
     renderDossier(current, currentSaved);
     toast('Fresh outreach generated');
   }catch(e){ toast('Regenerate failed: '+e.message); btn.disabled=false; btn.textContent='↻ Regenerate'; }
+}
+async function polishEmail(){
+  if(!current) return;
+  const btn=document.getElementById('polishBtn');
+  btn.disabled=true; btn.textContent='Checking real issues…';
+  try{
+    const r = await api('/polish-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:current.profile, analysis:current.analysis, subject:val('emSub'), body:val('emBody')})});
+    if(r.email){
+      document.getElementById('emSub').value = r.email.subject || val('emSub');
+      document.getElementById('emBody').value = r.email.body || val('emBody');
+    }
+    toast('Email rewritten with the real detected issue + fix');
+  }catch(e){ toast('AI fix failed: '+e.message); }
+  finally{ btn.disabled=false; btn.textContent='✨ Fix with AI'; }
+}
+async function sendEmailNow(){
+  const to=val('emTo'), subject=val('emSub'), body=val('emBody');
+  if(!to){ toast('Enter a To: email address first'); return; }
+  const btn=document.getElementById('sendEmailBtn');
+  btn.disabled=true; btn.textContent='Sending…';
+  try{
+    await api('/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to,subject,body,fromName:'Addy — Zapic Digital US'})});
+    toast('Email sent to '+to);
+  }catch(e){ toast('Send failed: '+e.message); }
+  finally{ btn.disabled=false; btn.textContent='Send'; }
+}
+async function regenFollowup(){
+  if(!current) return;
+  const btn=document.getElementById('fuRegenBtn');
+  btn.disabled=true; btn.textContent='Matching…';
+  try{
+    const r = await api('/followup-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:current.profile, analysis:current.analysis, coldSubject:val('emSub'), coldBody:val('emBody')})});
+    if(r.email){
+      document.getElementById('fuSub').value = r.email.subject || val('fuSub');
+      document.getElementById('fuBody').value = r.email.body || val('fuBody');
+    }
+    toast('Follow-up now matches your cold email');
+  }catch(e){ toast('Failed: '+e.message); }
+  finally{ btn.disabled=false; btn.textContent='↻ Match to cold email'; }
+}
+async function sendFollowupNow(){
+  const to=val('emTo'), subject=val('fuSub'), body=val('fuBody');
+  if(!to){ toast('Enter a To: email address in the Cold Email section first'); return; }
+  const btn=document.getElementById('sendFuBtn');
+  btn.disabled=true; btn.textContent='Sending…';
+  try{
+    await api('/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to,subject,body,fromName:'Addy — Zapic Digital US'})});
+    toast('Follow-up sent to '+to);
+  }catch(e){ toast('Send failed: '+e.message); }
+  finally{ btn.disabled=false; btn.textContent='Send'; }
+}
+async function sendSmsNow(){
+  const to=val('smsNum').replace(/[^\d+]/g,'');
+  if(!to){ toast('Enter a phone number first'); return; }
+  const btn=document.getElementById('sendSmsBtn');
+  btn.disabled=true; btn.textContent='Sending…';
+  try{
+    await api('/send-sms',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to, body: val('smsBody')})});
+    toast('Text sent to '+to);
+  }catch(e){ toast('Send failed: '+e.message); }
+  finally{ btn.disabled=false; btn.textContent='Send'; }
 }
 
 /* ================= CRM ================= */
