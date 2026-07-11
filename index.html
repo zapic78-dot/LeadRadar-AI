@@ -531,7 +531,7 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 90px}
 <section id="tab-batch" class="tab">
   <div class="scan-hero rise">
     <h2>Paste a list. Walk away.</h2>
-    <p>Drop in up to 30 businesses. LeadRadar checks each one for phone, email, website, map listing, and socials — using free data sources + a direct site check per business. <b>No paid keys, no AI keys used.</b> Then filter the segments and deep-scan only the winners.</p>
+    <p>Drop in up to 30 businesses. LeadRadar checks each one for phone, email, website, Google presence, and socials — using AI web search (the same engine as Full Scan, but quick). <b>100% free — no paid keys or billing needed.</b> Then filter the segments and deep-scan only the winners.</p>
   </div>
   <div class="scan-card card rise">
     <div class="field">
@@ -1516,7 +1516,7 @@ async function runBatch(){
       failed++;
     }
     done++;
-    if(i<items.length-1) await new Promise(r=>setTimeout(r,1200)); // gentle on free rate limits (OpenStreetMap asks ~1/sec)
+    if(i<items.length-1) await new Promise(r=>setTimeout(r,1800)); // Gemini web-search triage is heavier — space requests out to respect free-tier limits
   }
   btn.disabled=false; btn.textContent='Triage all';
   toast('Done — '+added+' checked'+(skipped?', '+skipped+' skipped':'')+(failed?', '+failed+' failed':''));
