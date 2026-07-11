@@ -1079,6 +1079,7 @@ function renderDossier(d, saved){
       <div class="sec rise"><span class="sec-tab">Web Presence</span><div class="sec-body">
         ${kv('Website', normSite(p.website)?('<a href="'+esc(normSite(p.website))+'" target="_blank" rel="noopener">'+esc(p.website)+'</a> <span class="pill mid">'+esc(p.website_status||'')+'</span>'+(ev&&ev.website?' '+vpill(ev.website.verified):'')):'<span class="pill no">Not Found</span>')}
         ${kv('Tech', esc(p.tech_stack))}
+        ${p.mobile_speed!=null?kv('Mobile speed','<span class="pill '+(p.mobile_speed>=80?'ok':(p.mobile_speed>=50?'mid':'no'))+'">'+esc(p.mobile_speed)+'/100</span> <small class="src" style="display:inline">Google PageSpeed (mobile)</small>'):''}
         ${w&&w.found?kv('Domain age', esc(w.age_years!=null?(w.age_years+' years (since '+String(w.created).slice(0,10)+')'):'')):''}
         ${w&&w.found?kv('Registrar', esc(w.registrar)):''}
         ${kv('SEO signals', esc(p.seo_signals))}
@@ -1295,8 +1296,8 @@ async function sendEmailNow(){
   const btn=document.getElementById('sendEmailBtn');
   btn.disabled=true; btn.textContent='Sending…';
   try{
-    await api('/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to,subject,body,fromName:'Addy — Zapic Digital US'})});
-    toast('Email sent to '+to);
+    const r=await api('/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to,subject,body,fromName:'Addy — Zapic Digital US'})});
+    toast('Email sent to '+to+(r.sent_today?' ('+r.sent_today+'/'+r.cap+' today)':''));
   }catch(e){ toast('Send failed: '+e.message); }
   finally{ btn.disabled=false; btn.textContent='Send'; }
 }
@@ -1320,8 +1321,8 @@ async function sendFollowupNow(){
   const btn=document.getElementById('sendFuBtn');
   btn.disabled=true; btn.textContent='Sending…';
   try{
-    await api('/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to,subject,body,fromName:'Addy — Zapic Digital US'})});
-    toast('Follow-up sent to '+to);
+    const r=await api('/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to,subject,body,fromName:'Addy — Zapic Digital US'})});
+    toast('Follow-up sent to '+to+(r.sent_today?' ('+r.sent_today+'/'+r.cap+' today)':''));
   }catch(e){ toast('Send failed: '+e.message); }
   finally{ btn.disabled=false; btn.textContent='Send'; }
 }
@@ -1331,8 +1332,8 @@ async function sendSmsNow(){
   const btn=document.getElementById('sendSmsBtn');
   btn.disabled=true; btn.textContent='Sending…';
   try{
-    await api('/send-sms',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to, body: val('smsBody')})});
-    toast('Text sent to '+to);
+    const r=await api('/send-sms',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to, body: val('smsBody')})});
+    toast('Text sent to '+to+(r.sent_today?' ('+r.sent_today+'/'+r.cap+' today)':''));
   }catch(e){ toast('Send failed: '+e.message); }
   finally{ btn.disabled=false; btn.textContent='Send'; }
 }
@@ -1733,7 +1734,14 @@ async function testWorker(){
   msg.innerHTML='<div class="ok-msg">Testing…</div>';
   try{
     const r=await fetch(url+'/health'); const d=await r.json();
-    msg.innerHTML = d.ok ? '<div class="ok-msg">✓ Connected to LeadRadar Worker.</div>' : '<div class="err-msg">Reached the URL but it doesn\'t look like the LeadRadar Worker.</div>';
+    if(d.ok){
+      const extras=[];
+      extras.push(d.claude?'Claude AI ✓':'Claude off (using Gemini)');
+      extras.push(d.gmail?'Gmail send ✓':'Gmail send not set up');
+      msg.innerHTML='<div class="ok-msg">✓ Connected to LeadRadar Worker (v'+(d.version||'?')+').<br><span style="color:var(--muted);font-size:13px">'+extras.join(' · ')+'</span></div>';
+    } else {
+      msg.innerHTML='<div class="err-msg">Reached the URL but it doesn\'t look like the LeadRadar Worker.</div>';
+    }
   }catch(e){ msg.innerHTML='<div class="err-msg">Could not reach that URL. Check it\'s deployed and CORS is allowed.</div>'; }
 }
 
