@@ -531,7 +531,7 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 90px}
 <section id="tab-batch" class="tab">
   <div class="scan-hero rise">
     <h2>Paste a list. Walk away.</h2>
-    <p>Drop in up to 30 businesses. LeadRadar checks each one for phone, email, website, Google Business Profile, and socials — one cheap Places lookup + a direct site check per business. <b>No AI keys are used.</b> Then filter the segments and deep-scan only the winners.</p>
+    <p>Drop in up to 30 businesses. LeadRadar checks each one for phone, email, website, map listing, and socials — using free data sources + a direct site check per business. <b>No paid keys, no AI keys used.</b> Then filter the segments and deep-scan only the winners.</p>
   </div>
   <div class="scan-card card rise">
     <div class="field">
@@ -1498,15 +1498,17 @@ async function runBatch(){
         category: res.category||null,
         maps_url: res.maps_url||null,
         business_status: res.business_status||null,
+        map_listed: !!res.map_listed,
+        source: res.source||null,
         createdAt: Date.now()
       };
-      rec.completeness=[rec.phone,(rec.emails||[]).length,rec.website,rec.gbp&&rec.gbp.found,Object.keys(rec.socials||{}).length].filter(Boolean).length;
+      rec.completeness=[rec.phone,(rec.emails||[]).length,rec.website,(rec.gbp&&rec.gbp.found)||rec.map_listed,Object.keys(rec.socials||{}).length].filter(Boolean).length;
       await db.triage.add(rec);
       seen.add(key);
       row.classList.remove('doing'); row.classList.add('done');
       st.textContent = res.found
         ? ('✓ '+rec.completeness+'/5 — '+[rec.phone?'phone':null,(rec.emails||[]).length?'email':null,rec.website?'site':null].filter(Boolean).join(', ')||'✓ found')
-        : '✓ not found on Google';
+        : '✓ not found in free data';
       added++;
     }catch(e){
       row.classList.remove('doing'); row.classList.add('fail');
@@ -1514,7 +1516,7 @@ async function runBatch(){
       failed++;
     }
     done++;
-    if(i<items.length-1) await new Promise(r=>setTimeout(r,1300)); // gentle on rate limits
+    if(i<items.length-1) await new Promise(r=>setTimeout(r,1200)); // gentle on free rate limits (OpenStreetMap asks ~1/sec)
   }
   btn.disabled=false; btn.textContent='Triage all';
   toast('Done — '+added+' checked'+(skipped?', '+skipped+' skipped':'')+(failed?', '+failed+' failed':''));
@@ -1547,7 +1549,7 @@ async function renderTriage(){
   const segs=[
     ['all','All'],['nophone','No phone'],['noemail','No email'],['nosite','No website'],
     ['sitedown','Site down'],['nogbp','No GBP'],['nosoc','No social'],
-    ['mailonly','✉ Mail-only'],['complete','Complete'],['nofound','Not on Google']
+    ['mailonly','✉ Mail-only'],['complete','Complete'],['nofound','Not found']
   ];
   const counts={all:all.length};
   for(const t of all){ const s=triageSegment(t); for(const k in s) if(s[k]) counts[k]=(counts[k]||0)+1; }
@@ -1572,14 +1574,15 @@ async function renderTriage(){
       +'<button class="btn btn-primary" style="width:auto;padding:8px 14px;font-size:14px" onclick="fullScanFromTriage('+t.id+')">Full scan</button>'
       +'<button class="btn btn-ghost" style="color:var(--bad)" onclick="delTriage('+t.id+')">✕</button></span></div>'
       +(!t.found
-        ? '<div class="sigrow"><span class="sig n">Not found on Google — check the spelling or run a full scan</span></div>'
+        ? '<div class="sigrow"><span class="sig n">Not found in free data — try a full scan (uses AI web search)</span></div>'
         : '<div class="sigrow">'
           +sig(t.phone,'Phone','Phone')
           +sig(hasEmail,'Email'+((t.emails||[]).length>1?' ×'+t.emails.length:''),'Email')
           +(t.website ? (t.website_ok===false?'<span class="sig u">⚠ Site listed but unreachable</span>':'<span class="sig y">✓ Website</span>') : '<span class="sig n">✗ Website</span>')
-          +sig(t.gbp&&t.gbp.found,'GBP','GBP')
+          +(t.gbp&&t.gbp.found?'<span class="sig y">✓ Google Profile</span>':(t.map_listed?'<span class="sig u">On map (no Google profile confirmed)</span>':'<span class="sig n">✗ Not on map</span>'))
           +(socKeys.length?'<span class="sig y">✓ Social: '+socKeys.map(esc).join(', ')+'</span>':'<span class="sig n">✗ Social</span>')
           +(t.business_status&&t.business_status!=='OPERATIONAL'?'<span class="sig u">⚠ '+esc(t.business_status)+'</span>':'')
+          +(t.source?'<span class="sig u" style="opacity:.7">'+esc(t.source)+'</span>':'')
           +'</div>'
           +(t.phone||hasEmail?'<div class="addr">'+[t.phone?'📞 '+esc(t.phone):null,hasEmail?'✉️ '+esc(t.emails[0]):null].filter(Boolean).join(' · ')+'</div>':'')
           +(t.address?'<div class="addr">📍 '+esc(t.address)+(triageSegment(t).mailonly?' <span class="sig u">Mail-only — send a letter</span>':'')+'</div>':''))
