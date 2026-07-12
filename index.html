@@ -408,6 +408,8 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 90px}
 .chip:hover{border-color:var(--line-strong)}
 .chip.on{border-color:var(--signal);background:var(--mid-bg);color:var(--ink)}
 .chip .n{font-family:'IBM Plex Mono';font-size:12px;opacity:.75;margin-left:4px}
+.chip.prio{border-color:var(--signal);font-weight:700}
+.chip.prio.on{background:linear-gradient(180deg,#F7AE45,var(--signal));color:#1B1204}
 .sig{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px;letter-spacing:.02em}
 .sig.y{background:var(--good-bg);color:var(--good)}
 .sig.n{background:var(--bad-bg);color:var(--bad)}
@@ -422,6 +424,8 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 90px}
 .trow{padding:14px 16px;margin-bottom:10px}
 .trow .sigrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px;align-items:center}
 .trow .addr{font-size:13px;color:var(--muted);margin-top:6px}
+.trow .gapline{font-size:13px;font-weight:600;color:var(--signal-deep);margin-top:6px}
+:root[data-theme="dark"] .trow .gapline{color:var(--signal)}
 
 /* ============================================================
    Settings
@@ -531,7 +535,7 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 90px}
 <section id="tab-batch" class="tab">
   <div class="scan-hero rise">
     <h2>Paste a list. Walk away.</h2>
-    <p>Drop in up to 30 businesses. LeadRadar checks each one for phone, email, website, Google presence, and socials — using AI web search (the same engine as Full Scan, but quick). <b>100% free — no paid keys or billing needed.</b> Then filter the segments and deep-scan only the winners.</p>
+    <p>Drop in up to 30 businesses. LeadRadar checks each one for phone, email, website, Google presence, and socials — using AI web search (the same engine as Full Scan, but quick). <b>100% free — no paid keys or billing needed.</b> When it's done, the 🎯 Priority list shows you exactly who to contact: reachable businesses with a real gap to pitch.</p>
   </div>
   <div class="scan-card card rise">
     <div class="field">
@@ -555,6 +559,8 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 90px}
       <option value="rating">Highest rating first</option>
       <option value="new">Newest first</option>
     </select>
+    <button class="btn btn-dark" onclick="copyPriorityList()">📋 Copy Priority List</button>
+    <button class="btn btn-ghost" onclick="downloadPriorityTxt()">Priority .txt</button>
     <button class="btn btn-ghost" onclick="exportTriageCSV()">Export view CSV</button>
     <button class="btn btn-ghost" style="color:var(--bad)" onclick="clearTriage()">Clear all</button>
   </div>
@@ -1410,7 +1416,7 @@ async function openLead(id){
 }
 
 /* ================= Batch triage ================= */
-let bFilter = 'all';
+let bFilter = 'priority';
 
 function parseBatchInput(){
   const defLoc = document.getElementById('bLoc').value.trim() || S.defLoc;
@@ -1520,13 +1526,19 @@ async function runBatch(){
   }
   btn.disabled=false; btn.textContent='Triage all';
   toast('Done — '+added+' checked'+(skipped?', '+skipped+' skipped':'')+(failed?', '+failed+' failed':''));
+  bFilter='priority'; // jump straight to the hit list — reachable businesses with a gap
   renderTriage();
 }
 
+/* Priority = your hit list: we found a phone OR email (you can contact them)
+   AND they're missing a website OR missing a Google Business Profile (you have something to pitch). */
 function triageSegment(t){
   const hasSoc=Object.keys(t.socials||{}).length>0;
   const hasEmail=(t.emails||[]).length>0;
+  const reachable = !!t.phone || hasEmail;
+  const hasGap = !t.website || t.website_ok===false || !(t.gbp&&t.gbp.found);
   return {
+    priority: t.found && reachable && hasGap,
     nofound: !t.found,
     nophone: t.found && !t.phone,
     noemail: t.found && !hasEmail,
@@ -1539,6 +1551,15 @@ function triageSegment(t){
   };
 }
 
+/* The gap(s) for a priority lead — what you pitch them */
+function gapText(t){
+  const gaps=[];
+  if(!t.website) gaps.push('No website');
+  else if(t.website_ok===false) gaps.push('Site down');
+  if(!(t.gbp&&t.gbp.found)) gaps.push('No GBP');
+  return gaps.join(', ');
+}
+
 async function renderTriage(){
   const all=await db.triage.toArray();
   const chipsEl=document.getElementById('bChips');
@@ -1547,14 +1568,15 @@ async function renderTriage(){
   if(!all.length){ chipsEl.innerHTML=''; toolsEl.style.display='none'; out.innerHTML=''; return; }
 
   const segs=[
-    ['all','All'],['nophone','No phone'],['noemail','No email'],['nosite','No website'],
+    ['priority','🎯 Priority'],['all','All'],['nophone','No phone'],['noemail','No email'],['nosite','No website'],
     ['sitedown','Site down'],['nogbp','No GBP'],['nosoc','No social'],
     ['mailonly','✉ Mail-only'],['complete','Complete'],['nofound','Not found']
   ];
   const counts={all:all.length};
   for(const t of all){ const s=triageSegment(t); for(const k in s) if(s[k]) counts[k]=(counts[k]||0)+1; }
-  chipsEl.innerHTML=segs.filter(([k])=>k==='all'||counts[k]).map(([k,l])=>
-    '<button class="chip'+(bFilter===k?' on':'')+'" onclick="bFilter=\''+k+'\';renderTriage()">'+l+'<span class="n">'+(counts[k]||0)+'</span></button>').join('');
+  if(bFilter==='priority' && !counts.priority) bFilter='all'; // nothing priority yet — show everything
+  chipsEl.innerHTML=segs.filter(([k])=>k==='all'||k==='priority'||counts[k]).map(([k,l])=>
+    '<button class="chip'+(k==='priority'?' prio':'')+(bFilter===k?' on':'')+'" onclick="bFilter=\''+k+'\';renderTriage()">'+l+'<span class="n">'+(counts[k]||0)+'</span></button>').join('');
   toolsEl.style.display='flex';
 
   let list = bFilter==='all' ? all : all.filter(t=>triageSegment(t)[bFilter]);
@@ -1567,6 +1589,7 @@ async function renderTriage(){
   const sig=(ok,yes,no)=> ok ? '<span class="sig y">✓ '+yes+'</span>' : '<span class="sig n">✗ '+no+'</span>';
   out.innerHTML = list.length ? list.map(t=>{
     const hasEmail=(t.emails||[]).length>0, socKeys=Object.keys(t.socials||{});
+    const seg=triageSegment(t);
     return '<div class="trow card rise">'
       +'<div class="lead-row"><span class="nm">'+esc(t.name)+'</span><span class="loc">'+esc(t.location)+'</span>'
       +(t.gbp&&t.gbp.rating!=null?'<span class="loc">★ '+esc(t.gbp.rating)+(t.gbp.review_count!=null?' ('+esc(t.gbp.review_count)+')':'')+'</span>':'')
@@ -1584,15 +1607,52 @@ async function renderTriage(){
           +(t.business_status&&t.business_status!=='OPERATIONAL'?'<span class="sig u">⚠ '+esc(t.business_status)+'</span>':'')
           +(t.source?'<span class="sig u" style="opacity:.7">'+esc(t.source)+'</span>':'')
           +'</div>'
+          +(seg.priority?'<div class="gapline">🎯 Pitch: '+esc(gapText(t))+' — reachable, ready for outreach</div>':'')
           +(t.phone||hasEmail?'<div class="addr">'+[t.phone?'📞 '+esc(t.phone):null,hasEmail?'✉️ '+esc(t.emails[0]):null].filter(Boolean).join(' · ')+'</div>':'')
-          +(t.address?'<div class="addr">📍 '+esc(t.address)+(triageSegment(t).mailonly?' <span class="sig u">Mail-only — send a letter</span>':'')+'</div>':''))
+          +(t.address?'<div class="addr">📍 '+esc(t.address)+(seg.mailonly?' <span class="sig u">Mail-only — send a letter</span>':'')+'</div>':''))
       +'</div>';
   }).join('') : '<div class="empty"><b>Nothing in this segment</b>Try another filter chip above.</div>';
 }
 
+/* ================= Priority List export — plain Notepad text ================= */
+function priorityLine(t){
+  return t.name
+    +' — '+(t.phone||'no phone')
+    +' — '+(((t.emails||[])[0])||'no email')
+    +' — '+gapText(t);
+}
+async function buildPriorityText(){
+  const all=await db.triage.toArray();
+  const list=all.filter(t=>triageSegment(t).priority);
+  if(!list.length) return null;
+  list.sort((a,b)=>(a.completeness??0)-(b.completeness??0)); // biggest gaps first
+  const both=list.filter(t=>t.phone&&(t.emails||[]).length);
+  const emailOnly=list.filter(t=>!t.phone&&(t.emails||[]).length);
+  const phoneOnly=list.filter(t=>t.phone&&!(t.emails||[]).length);
+  let txt='ZAPIC PRIORITY LIST — '+list.length+' reachable businesses with a gap\n';
+  txt+='Generated '+new Date().toLocaleString()+'\n';
+  txt+='Format: Name — Phone — Email — Gap to pitch\n';
+  txt+='========================================\n\n';
+  if(both.length){ txt+='PHONE + EMAIL ('+both.length+') — call or email, your pick:\n'+both.map(priorityLine).join('\n')+'\n\n'; }
+  if(emailOnly.length){ txt+='EMAIL ONLY ('+emailOnly.length+') — send GMass campaign:\n'+emailOnly.map(priorityLine).join('\n')+'\n\n'; }
+  if(phoneOnly.length){ txt+='PHONE ONLY ('+phoneOnly.length+') — call these:\n'+phoneOnly.map(priorityLine).join('\n')+'\n'; }
+  return txt.trim();
+}
+async function copyPriorityList(){
+  const txt=await buildPriorityText();
+  if(!txt){ toast('No priority leads yet — run a batch first'); return; }
+  copyText(txt);
+}
+async function downloadPriorityTxt(){
+  const txt=await buildPriorityText();
+  if(!txt){ toast('No priority leads yet — run a batch first'); return; }
+  download('zapic-priority-list-'+new Date().toISOString().slice(0,10)+'.txt', txt, 'text/plain');
+  toast('Priority list downloaded');
+}
+
 async function delTriage(id){ await db.triage.delete(id); renderTriage(); }
 async function clearTriage(){
-  if(confirm('Clear all triage results? (Saved leads are not affected.)')){ await db.triage.clear(); bFilter='all'; renderTriage(); toast('Triage list cleared'); }
+  if(confirm('Clear all triage results? (Saved leads are not affected.)')){ await db.triage.clear(); bFilter='priority'; renderTriage(); toast('Triage list cleared'); }
 }
 async function fullScanFromTriage(id){
   const t=await db.triage.get(id); if(!t) return;
