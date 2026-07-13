@@ -1505,6 +1505,7 @@ async function runBatch(){
         maps_url: res.maps_url||null,
         business_status: res.business_status||null,
         map_listed: !!res.map_listed,
+        verify: res.verify||null,
         source: res.source||null,
         createdAt: Date.now()
       };
@@ -1536,15 +1537,21 @@ function triageSegment(t){
   const hasSoc=Object.keys(t.socials||{}).length>0;
   const hasEmail=(t.emails||[]).length>0;
   const reachable = !!t.phone || hasEmail;
-  const hasGap = !t.website || t.website_ok===false || !(t.gbp&&t.gbp.found);
+  /* v12 worker sends verify:{website,gbp} = 'found'|'missing'|'unverified'.
+     Only a CONFIRMED 'missing' counts as a gap. 'unverified' is never a gap.
+     Old cached results without verify fall back to the old logic. */
+  const v=t.verify||null;
+  const gapWebsite = v ? v.website==='missing' : !t.website;
+  const gapGbp = v ? v.gbp==='missing' : !(t.gbp&&t.gbp.found);
+  const hasGap = gapWebsite || (t.website && t.website_ok===false) || gapGbp;
   return {
     priority: t.found && reachable && hasGap,
     nofound: !t.found,
     nophone: t.found && !t.phone,
     noemail: t.found && !hasEmail,
-    nosite: t.found && !t.website,
+    nosite: t.found && gapWebsite,
     sitedown: t.found && t.website && t.website_ok===false,
-    nogbp: t.found && !(t.gbp&&t.gbp.found),
+    nogbp: t.found && gapGbp,
     nosoc: t.found && !hasSoc,
     mailonly: t.found && t.address && !t.phone && !hasEmail && !t.website,
     complete: t.found && t.phone && hasEmail && t.website && (t.gbp&&t.gbp.found) && hasSoc
@@ -1553,10 +1560,11 @@ function triageSegment(t){
 
 /* The gap(s) for a priority lead — what you pitch them */
 function gapText(t){
+  const v=t.verify||null;
   const gaps=[];
-  if(!t.website) gaps.push('No website');
-  else if(t.website_ok===false) gaps.push('Site down');
-  if(!(t.gbp&&t.gbp.found)) gaps.push('No GBP');
+  if(v ? v.website==='missing' : !t.website) gaps.push('No website'+(v?' (double-checked)':''));
+  else if(t.website && t.website_ok===false) gaps.push('Site down');
+  if(v ? v.gbp==='missing' : !(t.gbp&&t.gbp.found)) gaps.push('No GBP'+(v?' (double-checked)':''));
   return gaps.join(', ');
 }
 
@@ -1601,13 +1609,20 @@ async function renderTriage(){
         : '<div class="sigrow">'
           +sig(t.phone,'Phone','Phone')
           +sig(hasEmail,'Email'+((t.emails||[]).length>1?' ×'+t.emails.length:''),'Email')
-          +(t.website ? (t.website_ok===false?'<span class="sig u">⚠ Site listed but unreachable</span>':'<span class="sig y">✓ Website</span>') : '<span class="sig n">✗ Website</span>')
-          +(t.gbp&&t.gbp.found?'<span class="sig y">✓ Google Profile</span>':(t.map_listed?'<span class="sig u">On map (no Google profile confirmed)</span>':'<span class="sig n">✗ Not on map</span>'))
+          +(t.website ? (t.website_ok===false?'<span class="sig u">⚠ Site listed but unreachable</span>':'<span class="sig y">✓ Website</span>')
+            : (t.verify&&t.verify.website==='unverified'?'<span class="sig u">? Website unconfirmed</span>'
+              : '<span class="sig n">✗ Website'+(t.verify?' (verified)':'')+'</span>'))
+          +(t.gbp&&t.gbp.found?'<span class="sig y">✓ Google Profile</span>'
+            :(t.map_listed?'<span class="sig u">On map (no Google profile confirmed)</span>'
+              :(t.verify&&t.verify.gbp==='unverified'?'<span class="sig u">? Google Profile unconfirmed</span>'
+                :'<span class="sig n">✗ Not on map'+(t.verify?' (verified)':'')+'</span>')))
           +(socKeys.length?'<span class="sig y">✓ Social: '+socKeys.map(esc).join(', ')+'</span>':'<span class="sig n">✗ Social</span>')
           +(t.business_status&&t.business_status!=='OPERATIONAL'?'<span class="sig u">⚠ '+esc(t.business_status)+'</span>':'')
           +(t.source?'<span class="sig u" style="opacity:.7">'+esc(t.source)+'</span>':'')
           +'</div>'
-          +(seg.priority?'<div class="gapline">🎯 Pitch: '+esc(gapText(t))+' — reachable, ready for outreach</div>':'')
+          +(seg.priority?'<div class="gapline">🎯 Possible gap: '+esc(gapText(t))+' — <b>verify before emailing:</b> '
+            +'<a href="https://www.google.com/search?q='+encodeURIComponent(t.name+' '+(t.location||''))+'" target="_blank" rel="noopener" onclick="return peek(this.href)">Google ↗</a> · '
+            +'<a href="https://www.google.com/maps/search/'+encodeURIComponent(t.name+' '+(t.location||''))+'" target="_blank" rel="noopener" onclick="return peek(this.href)">Maps ↗</a></div>':'')
           +(t.phone||hasEmail?'<div class="addr">'+[t.phone?'📞 '+esc(t.phone):null,hasEmail?'✉️ '+esc(t.emails[0]):null].filter(Boolean).join(' · ')+'</div>':'')
           +(t.address?'<div class="addr">📍 '+esc(t.address)+(seg.mailonly?' <span class="sig u">Mail-only — send a letter</span>':'')+'</div>':''))
       +'</div>';
@@ -1629,9 +1644,10 @@ async function buildPriorityText(){
   const both=list.filter(t=>t.phone&&(t.emails||[]).length);
   const emailOnly=list.filter(t=>!t.phone&&(t.emails||[]).length);
   const phoneOnly=list.filter(t=>t.phone&&!(t.emails||[]).length);
-  let txt='ZAPIC PRIORITY LIST — '+list.length+' reachable businesses with a gap\n';
+  let txt='ZAPIC PRIORITY LIST — '+list.length+' reachable businesses with a possible gap\n';
   txt+='Generated '+new Date().toLocaleString()+'\n';
-  txt+='Format: Name — Phone — Email — Gap to pitch\n';
+  txt+='Format: Name — Phone — Email — Possible gap\n';
+  txt+='!! GAPS ARE FROM A QUICK SCAN — GOOGLE EACH BUSINESS (20 sec) BEFORE SENDING !!\n';
   txt+='========================================\n\n';
   if(both.length){ txt+='PHONE + EMAIL ('+both.length+') — call or email, your pick:\n'+both.map(priorityLine).join('\n')+'\n\n'; }
   if(emailOnly.length){ txt+='EMAIL ONLY ('+emailOnly.length+') — send GMass campaign:\n'+emailOnly.map(priorityLine).join('\n')+'\n\n'; }
