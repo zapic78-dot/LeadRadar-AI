@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeadRadar — Review &amp; Send</title>
+<style>
+  :root{
+    --ink:#1c2b24;
+    --paper:#f6f4ee;
+    --line:#d8d3c4;
+    --accent:#2f6f4f;
+    --accent-dim:#e4efe7;
+    --warn:#a34b2e;
+    --mono: "SF Mono", "JetBrains Mono", Consolas, monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    padding:24px;
+  }
+  h1{font-size:20px; margin:0 0 4px;}
+  .sub{color:#5c6b60; font-size:13px; margin-bottom:24px;}
+  .card{
+    background:#fff; border:1px solid var(--line); border-radius:10px;
+    padding:20px; margin-bottom:20px;
+  }
+  .card h2{font-size:14px; text-transform:uppercase; letter-spacing:.06em; margin:0 0 12px; color:#5c6b60;}
+  textarea{
+    width:100%; min-height:120px; font-family:var(--mono); font-size:13px;
+    border:1px solid var(--line); border-radius:6px; padding:10px; resize:vertical;
+  }
+  input[type=text]{
+    width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:6px; font-size:13px; font-family:var(--mono);
+  }
+  button{
+    background:var(--accent); color:#fff; border:none; border-radius:6px;
+    padding:10px 16px; font-size:13px; font-weight:600; cursor:pointer;
+  }
+  button.secondary{ background:#fff; color:var(--accent); border:1px solid var(--accent); }
+  button:disabled{ opacity:.45; cursor:not-allowed; }
+  .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:12px;}
+  table{width:100%; border-collapse:collapse; font-size:13px; margin-top:14px;}
+  th,td{ text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top;}
+  th{font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:#5c6b60;}
+  tr:hover td{background:var(--accent-dim);}
+  .yes{color:var(--accent); font-weight:600;}
+  .no{color:var(--warn); font-weight:600;}
+  .tag{
+    display:inline-block; font-size:11px; padding:2px 8px; border-radius:999px;
+    background:var(--accent-dim); color:var(--accent); font-weight:600;
+  }
+  .tag.none{background:#eee; color:#999;}
+  .draft{border:1px solid var(--line); border-radius:8px; padding:14px; margin-bottom:14px;}
+  .draft h3{margin:0 0 8px; font-size:14px;}
+  .draft label{font-size:11px; text-transform:uppercase; color:#5c6b60; display:block; margin:8px 0 4px;}
+  .status{font-size:12px; color:#5c6b60; margin-top:10px;}
+  .status.err{color:var(--warn);}
+  .hidden{display:none;}
+  small.hint{color:#8a8f89; display:block; margin-top:6px; font-size:12px;}
+</style>
+</head>
+<body>
+
+<h1>LeadRadar — Review &amp; Send</h1>
+<div class="sub">Check a batch → pick who needs outreach → review the AI-drafted email → approve &amp; queue.</div>
+
+<div class="card">
+  <h2>0. Worker URL</h2>
+  <input type="text" id="apiBase" value="https://ledradar.zapic78.workers.dev" placeholder="https://ledradar.zapic78.workers.dev">
+  <small class="hint">Your LeadRadar Worker (v15). Change only if it moves.</small>
+</div>
+
+<div class="card">
+  <h2>1. Paste businesses</h2>
+  <textarea id="inputBusinesses" placeholder="One business per line: Business Name, Address&#10;e.g.&#10;Green Valley Auto, 123 Main St, Kent WA&#10;Sunrise Bakery, 456 2nd Ave, Kent WA"></textarea>
+  <div class="row">
+    <button id="checkBtn">Check businesses</button>
+    <span class="status" id="checkStatus"></span>
+  </div>
+</div>
+
+<div class="card hidden" id="tableCard">
+  <h2>2. Results — select who to contact</h2>
+  <div class="row">
+    <button class="secondary" id="selectFlagged">Select all with an issue</button>
+    <button class="secondary" id="selectNone">Clear selection</button>
+  </div>
+  <table id="resultsTable">
+    <thead>
+      <tr>
+        <th></th><th>Business</th><th>Phone</th><th>Email</th><th>Website</th><th>GBP</th><th>Issue</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <div class="row">
+    <button id="draftBtn">Generate emails for selected</button>
+    <span class="status" id="draftStatus"></span>
+  </div>
+</div>
+
+<div class="card hidden" id="draftsCard">
+  <h2>3. Review drafts — edit anything, then approve</h2>
+  <div id="draftsList"></div>
+  <div class="row">
+    <button id="queueBtn">Approve &amp; queue for sending</button>
+    <span class="status" id="queueStatus"></span>
+  </div>
+</div>
+
+<script>
+let checkedResults = [];
+let drafts = [];
+
+function apiBase(){ return document.getElementById('apiBase').value.replace(/\/+$/,''); }
+
+function parseInput(raw){
+  return raw.split('\n').map(l=>l.trim()).filter(Boolean).map(line=>{
+    const parts = line.split(',');
+    const name = (parts.shift()||'').trim();
+    const address = parts.join(',').trim();
+    return { name, address };
+  });
+}
+
+document.getElementById('checkBtn').addEventListener('click', async ()=>{
+  const raw = document.getElementById('inputBusinesses').value;
+  const businesses = parseInput(raw);
+  const statusEl = document.getElementById('checkStatus');
+  if(!businesses.length){ statusEl.textContent='Paste at least one business first.'; statusEl.className='status err'; return; }
+
+  statusEl.textContent = `Checking ${businesses.length} businesses… this can take a bit for larger batches.`;
+  statusEl.className = 'status';
+  document.getElementById('checkBtn').disabled = true;
+
+  try{
+    const res = await fetch(apiBase() + '/batch-check', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ businesses })
+    });
+    const data = await res.json();
+    if(!data.ok) throw new Error(data.error || 'batch-check failed');
+    checkedResults = data.businesses;
+    renderTable();
+    statusEl.textContent = `Done — ${checkedResults.length} checked.`;
+    document.getElementById('tableCard').classList.remove('hidden');
+  }catch(err){
+    statusEl.textContent = 'Error: ' + err.message;
+    statusEl.className = 'status err';
+  }finally{
+    document.getElementById('checkBtn').disabled = false;
+  }
+});
+
+function renderTable(){
+  const tbody = document.querySelector('#resultsTable tbody');
+  tbody.innerHTML = '';
+  checkedResults.forEach((b, i)=>{
+    const tr = document.createElement('tr');
+    const issueTag = b.category
+      ? `<span class="tag">${b.category.replace('_',' ')}</span>`
+      : `<span class="tag none">none</span>`;
+    tr.innerHTML = `
+      <td><input type="checkbox" class="rowCheck" data-idx="${i}" ${b.needsOutreach ? 'checked' : ''} ${b.error ? 'disabled' : ''}></td>
+      <td>${b.name}<br><small class="hint">${b.address||''}</small></td>
+      <td>${b.phone || '—'}</td>
+      <td>${b.email || '—'}</td>
+      <td>${b.hasWebsite ? '<span class="yes">Yes</span>' : '<span class="no">No</span>'}</td>
+      <td>${b.hasGBP ? (b.gbpStatus==='complete' ? '<span class="yes">Complete</span>' : '<span class="no">Incomplete</span>') : '<span class="no">Missing</span>'}</td>
+      <td>${b.error ? '<span class="no">error</span>' : issueTag}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+document.getElementById('selectFlagged').addEventListener('click', ()=>{
+  document.querySelectorAll('.rowCheck').forEach(cb=>{
+    const b = checkedResults[cb.dataset.idx];
+    cb.checked = !!(b && b.needsOutreach && !b.error);
+  });
+});
+document.getElementById('selectNone').addEventListener('click', ()=>{
+  document.querySelectorAll('.rowCheck').forEach(cb=> cb.checked = false);
+});
+
+document.getElementById('draftBtn').addEventListener('click', async ()=>{
+  const selected = [...document.querySelectorAll('.rowCheck:checked')]
+    .map(cb=> checkedResults[cb.dataset.idx])
+    .filter(b=> b && b.category && b.email); // needs an issue + an email to draft/send
+
+  const statusEl = document.getElementById('draftStatus');
+  if(!selected.length){
+    statusEl.textContent = 'Select at least one business that has both an issue and an email address.';
+    statusEl.className = 'status err';
+    return;
+  }
+
+  statusEl.textContent = `Drafting ${selected.length} email(s)…`;
+  statusEl.className = 'status';
+  document.getElementById('draftBtn').disabled = true;
+
+  try{
+    const res = await fetch(apiBase() + '/generate-emails', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ businesses: selected })
+    });
+    const data = await res.json();
+    if(!data.ok) throw new Error(data.error || 'generate-emails failed');
+    drafts = data.drafts;
+    renderDrafts();
+    statusEl.textContent = `${drafts.length} draft(s) ready below.`;
+    document.getElementById('draftsCard').classList.remove('hidden');
+  }catch(err){
+    statusEl.textContent = 'Error: ' + err.message;
+    statusEl.className = 'status err';
+  }finally{
+    document.getElementById('draftBtn').disabled = false;
+  }
+});
+
+function renderDrafts(){
+  const el = document.getElementById('draftsList');
+  el.innerHTML = '';
+  drafts.forEach((d, i)=>{
+    const div = document.createElement('div');
+    div.className = 'draft';
+    div.innerHTML = `
+      <h3>${d.name} <span class="tag">${d.category.replace('_',' ')}</span></h3>
+      <label>To</label>
+      <input type="text" value="${d.email}" data-field="email" data-idx="${i}">
+      <label>Subject</label>
+      <input type="text" value="${d.subject.replace(/"/g,'&quot;')}" data-field="subject" data-idx="${i}">
+      <label>Body</label>
+      <textarea data-field="body" data-idx="${i}">${d.body}</textarea>
+    `;
+    el.appendChild(div);
+  });
+  el.querySelectorAll('input,textarea').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const idx = e.target.dataset.idx, field = e.target.dataset.field;
+      drafts[idx][field] = e.target.value;
+    });
+  });
+}
+
+document.getElementById('queueBtn').addEventListener('click', async ()=>{
+  const statusEl = document.getElementById('queueStatus');
+  if(!drafts.length){ statusEl.textContent='No drafts to queue.'; statusEl.className='status err'; return; }
+
+  statusEl.textContent = 'Queuing…';
+  statusEl.className = 'status';
+  document.getElementById('queueBtn').disabled = true;
+
+  try{
+    const res = await fetch(apiBase() + '/queue-approved', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ businesses: drafts })
+    });
+    const data = await res.json();
+    if(!data.ok) throw new Error(data.error || 'queue-approved failed');
+    statusEl.textContent = `Queued ${data.queued} email(s). ${data.note}`;
+  }catch(err){
+    statusEl.textContent = 'Error: ' + err.message;
+    statusEl.className = 'status err';
+  }finally{
+    document.getElementById('queueBtn').disabled = false;
+  }
+});
+</script>
+</body>
+</html>
