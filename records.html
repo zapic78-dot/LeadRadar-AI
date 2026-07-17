@@ -50,6 +50,8 @@ tr:last-child td{border-bottom:none}
 .pill.replied{background:var(--good-bg);color:var(--good)}
 .pill.unknown{background:rgba(140,160,173,.14);color:var(--muted)}
 .sub{color:var(--muted);font-size:12px}
+.mini{background:transparent;border:1px solid var(--line);color:var(--ink-2);border-radius:8px;padding:5px 9px;font-size:12px;font-weight:600;cursor:pointer}
+.mini:hover{border-color:var(--line-strong)}
 .empty{text-align:center;color:var(--muted);padding:50px 20px}
 .empty a{color:var(--signal)}
 .note{font-size:12px;color:var(--muted);margin-top:12px}
@@ -75,7 +77,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:30px}
   </div>
 
   <div class="topbar">
-    <button class="btn btn-ghost" id="refreshBtn" onclick="load()">Refresh &amp; check replies</button>
+    <button class="btn btn-ghost" id="refreshBtn" onclick="load()">Refresh</button>
     <div class="chips">
       <div class="chip"><b id="cSent">0</b> sent</div>
       <div class="chip good"><b id="cReplied">0</b> replied</div>
@@ -98,7 +100,7 @@ function toggleTheme(){ theme = theme==='dark'?'light':'dark'; SS('lr_theme',the
 applyTheme();
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
 function when(ts){ if(!ts) return '—'; var d=new Date(ts); return d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' '+d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); }
-var ISSUE={no_website:'No website',no_gbp:'No GBP',incomplete_gbp:'Upgrade needed'};
+var ISSUE={no_website:'No website',no_gbp:'No GBP',incomplete_gbp:'Upgrade needed',general:'Selected lead'};
 
 function replyPill(r){
   if(r.replied===true) return '<span class="pill replied">REPLIED</span>';
@@ -106,37 +108,43 @@ function replyPill(r){
   return '<span class="pill unknown">unknown</span>';
 }
 
+function getSent(){ try{ return JSON.parse(LS('lr_sent','[]'))||[]; }catch(e){ return []; } }
+function saveSent(arr){ SS('lr_sent', JSON.stringify(arr)); }
+
+function toggleReplied(id){
+  var arr=getSent();
+  for(var i=0;i<arr.length;i++){ if(arr[i].id===id){ arr[i].replied=!arr[i].replied; arr[i].repliedAt=arr[i].replied?Date.now():null; break; } }
+  saveSent(arr); load();
+}
+function removeRec(id){
+  if(!confirm('Remove this record?')) return;
+  saveSent(getSent().filter(function(r){ return r.id!==id; })); load();
+}
+
 function load(){
-  var btn=document.getElementById('refreshBtn'); btn.disabled=true; btn.textContent='Checking…';
-  document.getElementById('note').textContent='';
-  fetch(worker+'/outreach/records').then(function(r){return r.json();}).then(function(data){
-    btn.disabled=false; btn.textContent='Refresh & check replies';
-    if(!data || !data.ok){ document.getElementById('content').innerHTML='<div class="empty">'+esc((data&&data.error)||'Could not load records.')+'</div>'; return; }
-    var recs=data.records||[];
-    document.getElementById('cSent').textContent=recs.length;
-    document.getElementById('cReplied').textContent=recs.filter(function(r){return r.replied===true;}).length;
-    if(!recs.length){
-      document.getElementById('content').innerHTML='<div class="empty">No emails sent yet.<br>Send some from the <a href="outreach.html">Outreach page</a>.</div>';
-      return;
-    }
-    var anyUnknown=recs.some(function(r){return r.replied===null||r.replied===undefined;});
-    var rowsHtml=recs.map(function(r){
-      var issue=r.category?('<div class="sub">'+esc(ISSUE[r.category]||r.category)+'</div>'):'';
-      return '<tr><td><b>'+esc(r.business||r.to)+'</b>'+issue+'</td>'
-        +'<td class="sub">'+esc(r.to)+'</td>'
-        +'<td>'+esc(r.subject||'')+'</td>'
-        +'<td class="mono sub">'+when(r.sentAt)+'</td>'
-        +'<td>'+replyPill(r)+(r.replied===true&&r.repliedAt?'<div class="sub">'+when(r.repliedAt)+'</div>':'')+'</td></tr>';
-    }).join('');
-    document.getElementById('content').innerHTML=
-      '<div class="tbl-wrap"><table><thead><tr><th>Business</th><th>Email</th><th>Subject</th><th>Sent</th><th>Reply</th></tr></thead><tbody>'+rowsHtml+'</tbody></table></div>';
-    if(anyUnknown){
-      document.getElementById('note').innerHTML='Reply status shows “unknown” when the Gmail token can’t read your inbox. To enable reply detection, the refresh token needs a read scope (gmail.readonly). Sending still works without it.';
-    }
-  }).catch(function(e){
-    btn.disabled=false; btn.textContent='Refresh & check replies';
-    document.getElementById('content').innerHTML='<div class="empty">'+esc(String(e))+'</div>';
-  });
+  var recs=getSent();
+  document.getElementById('cSent').textContent=recs.length;
+  document.getElementById('cReplied').textContent=recs.filter(function(r){ return r.replied===true; }).length;
+  if(!recs.length){
+    document.getElementById('content').innerHTML='<div class="empty">No emails sent yet.<br>Send some from the <a href="outreach.html">Outreach page</a>.</div>';
+    document.getElementById('note').textContent=''; return;
+  }
+  var rowsHtml=recs.map(function(r){
+    var issue=r.category?('<div class="sub">'+esc(ISSUE[r.category]||r.category)+'</div>'):'';
+    var pill = r.replied ? '<span class="pill replied">REPLIED</span>' : '<span class="pill sent">no reply yet</span>';
+    var repAt = (r.replied && r.repliedAt) ? '<div class="sub">'+when(r.repliedAt)+'</div>' : '';
+    var toggle = '<button class="mini" onclick="toggleReplied(\''+r.id+'\')">'+(r.replied?'Mark not replied':'Mark replied')+'</button>';
+    var del = '<button class="mini" onclick="removeRec(\''+r.id+'\')">Remove</button>';
+    return '<tr><td><b>'+esc(r.business||r.to)+'</b>'+issue+'</td>'
+      +'<td class="sub">'+esc(r.to)+'</td>'
+      +'<td>'+esc(r.subject||'')+'</td>'
+      +'<td class="mono sub">'+when(r.sentAt)+'</td>'
+      +'<td>'+pill+repAt+'</td>'
+      +'<td>'+toggle+' '+del+'</td></tr>';
+  }).join('');
+  document.getElementById('content').innerHTML=
+    '<div class="tbl-wrap"><table><thead><tr><th>Business</th><th>Email</th><th>Subject</th><th>Sent</th><th>Reply</th><th></th></tr></thead><tbody>'+rowsHtml+'</tbody></table></div>';
+  document.getElementById('note').innerHTML='Records are saved in this browser. Because emails are sent from Gmail directly, mark replies yourself with the “Mark replied” button.';
 }
 load();
 </script>
