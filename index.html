@@ -196,6 +196,8 @@ td a{word-break:break-all;font-size:13px}
 .pend{color:var(--muted)}
 .errtxt{color:var(--bad);font-size:12px}
 .subtxt{color:var(--muted);font-size:12px;margin-top:3px}
+.pickcell{text-align:center;width:36px}
+.pick,#pickAll{width:18px;height:18px;cursor:pointer;accent-color:var(--signal)}
 .pdfbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;justify-content:center}
 footer{color:var(--muted);font-size:12px;text-align:center;margin-top:34px}
 </style>
@@ -265,6 +267,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:34px}
     <div class="tbl-wrap">
       <table>
         <thead><tr>
+          <th class="pickcell"><input type="checkbox" id="pickAll" onclick="toggleAll(this)" title="Select all"></th>
           <th>#</th><th>Business</th><th>Google Listing</th>
           <th>Website</th><th>Phone</th><th>Email</th>
         </tr></thead>
@@ -275,6 +278,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:34px}
     <div class="pdfbar">
       <button class="btn btn-pdf" id="pdf1Btn" onclick="downloadPdf1()" disabled>PDF 1 — Email Leads</button>
       <button class="btn btn-pdf" id="pdf2Btn" onclick="downloadPdf2()" disabled>PDF 2 — Phone Leads</button>
+      <button class="btn btn-primary" id="outreachBtn" onclick="goOutreach()" disabled>Outreach →</button>
     </div>
     <div class="hint" style="text-align:center">
       PDF 1 = businesses with an email found (Business · Email · Phone · Website Y/N).<br>
@@ -320,7 +324,7 @@ function parseInput(){
       } else { name=line; address=suffix; }
       return {name, address, done:false, error:null,
               hasGBP:false, hasWebsite:false, website:null,
-              phone:null, email:null, googleName:null};
+              phone:null, email:null, googleName:null, gbpStatus:null};
     });
 }
 
@@ -370,6 +374,49 @@ function finishBatch(){
   const done=rows.filter(r=>r.done&&!r.error);
   document.getElementById('pdf1Btn').disabled=!done.some(r=>r.email);
   document.getElementById('pdf2Btn').disabled=!done.some(r=>r.phone);
+  updateOutreachBtn();
+}
+
+/* ---------- pick individual businesses -> send only those to page 2 ---------- */
+let picked = new Set();
+function togglePick(i, el){ if(el.checked) picked.add(i); else picked.delete(i); syncPickAll(); updateOutreachBtn(); }
+function toggleAll(el){
+  picked = new Set();
+  if(el.checked) rows.forEach((r,i)=>{ if(r.done&&!r.error) picked.add(i); });
+  renderTable(); updateOutreachBtn();
+}
+function syncPickAll(){
+  const done=rows.filter(r=>r.done&&!r.error).length;
+  const all=document.getElementById('pickAll');
+  if(all) all.checked = done>0 && picked.size===done;
+}
+function updateOutreachBtn(){
+  const done=rows.filter(r=>r.done&&!r.error);
+  const btn=document.getElementById('outreachBtn');
+  if(!btn) return;
+  btn.disabled = done.length===0;
+  btn.textContent = picked.size>0 ? ('Send '+picked.size+' to Outreach →') : 'Outreach → (all targets)';
+  syncPickAll();
+}
+function packRows(list){
+  return list.map(r=>({
+    name:r.name, googleName:r.googleName, hasGBP:r.hasGBP,
+    hasWebsite:r.hasWebsite, website:r.website, phone:r.phone,
+    email:r.email, gbpStatus:r.gbpStatus
+  }));
+}
+/* Hand the chosen results to the outreach page (page 2). Additive only —
+   does not touch verify, the table logic, or the PDF exports above. */
+function goOutreach(){
+  const done=rows.filter(r=>r.done&&!r.error);
+  let list, mode;
+  if(picked.size>0){ list=[...picked].sort((a,b)=>a-b).map(i=>rows[i]); mode='picked'; }
+  else { list=done; mode='all'; }
+  try{
+    localStorage.setItem('lr_results', JSON.stringify(packRows(list)));
+    localStorage.setItem('lr_mode', mode);
+  }catch(e){}
+  location.href='outreach.html';
 }
 
 async function verifyOne(endpoint,i,retry=true){
@@ -388,6 +435,7 @@ async function verifyOne(endpoint,i,retry=true){
     r.phone=data.phone;
     r.email=data.email;
     r.googleName=data.googleName;
+    r.gbpStatus=data.gbpStatus||null;
     r.done=true;
   }catch(e){
     if(retry){ await new Promise(s=>setTimeout(s,1200)); return verifyOne(endpoint,i,false); }
@@ -423,7 +471,9 @@ function rowCells(r,i){
   }
   const gname=(r.done&&!r.error&&r.googleName&&r.googleName!==r.name)
     ?'<div class="subtxt">Google: '+esc(r.googleName)+'</div>':'';
-  return '<td class="mono">'+(i+1)+'</td><td><b>'+esc(r.name)+'</b>'+gname+'</td><td>'+gbp+'</td><td>'+web+'</td><td>'+phone+'</td><td>'+email+'</td>';
+  const pick=(r.done&&!r.error)
+    ?'<input type="checkbox" class="pick" '+(picked.has(i)?'checked':'')+' onclick="togglePick('+i+',this)">':'';
+  return '<td class="pickcell">'+pick+'</td><td class="mono">'+(i+1)+'</td><td><b>'+esc(r.name)+'</b>'+gname+'</td><td>'+gbp+'</td><td>'+web+'</td><td>'+phone+'</td><td>'+email+'</td>';
 }
 function updateChips(){
   const done=rows.filter(r=>r.done&&!r.error);
