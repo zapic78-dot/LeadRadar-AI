@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>LeadRadar AI — Records</title>
+<meta name="theme-color" content="#0A1218">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23101B22'/><circle cx='50' cy='50' r='30' fill='none' stroke='%23E8930C' stroke-width='4'/><circle cx='50' cy='50' r='14' fill='none' stroke='%23E8930C' stroke-width='4'/><circle cx='66' cy='38' r='6' fill='%23E8930C'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--radius:14px;--radius-sm:10px;--signal:#F0A032;--signal-deep:#C97F12;--ease:cubic-bezier(.22,.8,.3,1)}
+:root[data-theme="dark"]{--bg:#0A1218;--glass:rgba(255,255,255,.045);--glass-2:rgba(255,255,255,.07);--line:rgba(255,255,255,.09);--line-strong:rgba(255,255,255,.16);--ink:#E9F0F3;--ink-2:#C4D2D9;--muted:#8CA0AA;--good:#3FBF77;--good-bg:rgba(63,191,119,.12);--bad:#F26D5B;--bad-bg:rgba(242,109,91,.12);--mid-bg:rgba(240,160,50,.14);--chip:#16232D;--shadow:0 8px 30px rgba(0,0,0,.35);--head:rgba(10,18,24,.72);--glow-a:rgba(240,160,50,.10);--glow-b:rgba(20,85,90,.22)}
+:root[data-theme="light"]{--bg:#EDF1F3;--glass:rgba(255,255,255,.66);--glass-2:rgba(255,255,255,.88);--line:rgba(16,27,34,.10);--line-strong:rgba(16,27,34,.20);--ink:#101B22;--ink-2:#2A3B45;--muted:#65757D;--good:#1E7A46;--good-bg:#E1F2E8;--bad:#B3372B;--bad-bg:#F9E6E3;--mid-bg:#FBEED6;--chip:#F3F6F7;--shadow:0 2px 6px rgba(16,27,34,.06),0 10px 30px rgba(16,27,34,.08);--head:rgba(237,241,243,.8);--glow-a:rgba(232,147,12,.12);--glow-b:rgba(20,85,90,.10)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Barlow',system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.5;min-height:100vh}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(560px 380px at 82% -6%,var(--glow-a),transparent 65%),radial-gradient(680px 480px at -10% 30%,var(--glow-b),transparent 60%)}
+button{font-family:inherit;cursor:pointer}
+.mono{font-family:'IBM Plex Mono',monospace}
+header{background:var(--head);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--line);padding:10px 18px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:50}
+.logo{width:36px;height:36px;flex:none}
+.brand h1{font-family:'Barlow Condensed';font-size:21px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;line-height:1;color:var(--ink)}
+.brand span{font-size:10px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase}
+.nav{margin-left:auto;display:flex;gap:8px;align-items:center}
+.nav a{font-size:13px;font-weight:600;color:var(--ink-2);text-decoration:none;padding:8px 12px;border:1px solid var(--line);border-radius:99px}
+.nav a.active{color:var(--signal);border-color:var(--signal)}
+.theme-btn{flex:none;border:1px solid var(--line);background:var(--glass);color:var(--ink);width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px}
+main{max-width:1000px;margin:0 auto;padding:24px 16px 90px}
+.hero{margin:14px 0 18px}
+.hero h2{font-family:'Barlow Condensed';font-size:30px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.hero p{color:var(--muted);font-size:15px;margin-top:4px}
+.topbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:var(--radius-sm);padding:11px 18px;font-weight:600;font-size:14px}
+.btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink-2)}
+.btn-ghost:hover{border-color:var(--line-strong)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+.chip{border:1px solid var(--line);background:var(--glass);color:var(--ink-2);border-radius:99px;padding:7px 14px;font-size:13px;font-weight:600}
+.chip b{font-family:'IBM Plex Mono';font-size:14px;margin-right:5px;color:var(--ink)}
+.chip.good b{color:var(--good)}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);background:var(--glass)}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:760px}
+th{font-family:'Barlow Condensed';font-size:14px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--signal-deep);text-align:left;padding:12px 14px;background:var(--glass-2);border-bottom:1px solid var(--line);white-space:nowrap}
+:root[data-theme="dark"] th{color:var(--signal)}
+td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:none}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:700}
+.pill.sent{background:var(--mid-bg);color:var(--signal-deep)}
+:root[data-theme="dark"] .pill.sent{color:var(--signal)}
+.pill.replied{background:var(--good-bg);color:var(--good)}
+.pill.unknown{background:rgba(140,160,173,.14);color:var(--muted)}
+.sub{color:var(--muted);font-size:12px}
+.empty{text-align:center;color:var(--muted);padding:50px 20px}
+.empty a{color:var(--signal)}
+.note{font-size:12px;color:var(--muted);margin-top:12px}
+footer{color:var(--muted);font-size:12px;text-align:center;margin-top:30px}
+</style>
+</head>
+<body>
+<header>
+  <svg class="logo" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#101B22" stroke="#2A3B45"/><circle cx="50" cy="50" r="30" fill="none" stroke="#E8930C" stroke-width="4"/><circle cx="50" cy="50" r="14" fill="none" stroke="#E8930C" stroke-width="4"/><circle cx="66" cy="38" r="6" fill="#E8930C"/></svg>
+  <div class="brand"><h1>LeadRadar AI</h1><span>Records</span></div>
+  <nav class="nav">
+    <a href="index.html">Scan</a>
+    <a href="outreach.html">Outreach</a>
+    <a href="records.html" class="active">Records</a>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" aria-label="Theme">☀️</button>
+  </nav>
+</header>
+
+<main>
+  <div class="hero">
+    <h2>Sent Records</h2>
+    <p>Every business you've emailed, and who has replied.</p>
+  </div>
+
+  <div class="topbar">
+    <button class="btn btn-ghost" id="refreshBtn" onclick="load()">Refresh &amp; check replies</button>
+    <div class="chips">
+      <div class="chip"><b id="cSent">0</b> sent</div>
+      <div class="chip good"><b id="cReplied">0</b> replied</div>
+    </div>
+  </div>
+
+  <div id="content"></div>
+  <div class="note" id="note"></div>
+
+  <footer>LeadRadar AI · Zapic Digital US</footer>
+</main>
+
+<script>
+function LS(k,d){ try{ var v=localStorage.getItem(k); return v===null?d:v; }catch(e){ return d; } }
+function SS(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+var worker = (LS('lr_worker','https://ledradar.zapic78.workers.dev')).replace(/\/+$/,'');
+var theme = LS('lr_theme','dark');
+function applyTheme(){ document.documentElement.setAttribute('data-theme',theme); document.getElementById('themeBtn').textContent = theme==='dark'?'☀️':'🌙'; }
+function toggleTheme(){ theme = theme==='dark'?'light':'dark'; SS('lr_theme',theme); applyTheme(); }
+applyTheme();
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function when(ts){ if(!ts) return '—'; var d=new Date(ts); return d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' '+d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); }
+var ISSUE={no_website:'No website',no_gbp:'No GBP',incomplete_gbp:'Upgrade needed'};
+
+function replyPill(r){
+  if(r.replied===true) return '<span class="pill replied">REPLIED</span>';
+  if(r.replied===false) return '<span class="pill sent">no reply yet</span>';
+  return '<span class="pill unknown">unknown</span>';
+}
+
+function load(){
+  var btn=document.getElementById('refreshBtn'); btn.disabled=true; btn.textContent='Checking…';
+  document.getElementById('note').textContent='';
+  fetch(worker+'/outreach/records').then(function(r){return r.json();}).then(function(data){
+    btn.disabled=false; btn.textContent='Refresh & check replies';
+    if(!data || !data.ok){ document.getElementById('content').innerHTML='<div class="empty">'+esc((data&&data.error)||'Could not load records.')+'</div>'; return; }
+    var recs=data.records||[];
+    document.getElementById('cSent').textContent=recs.length;
+    document.getElementById('cReplied').textContent=recs.filter(function(r){return r.replied===true;}).length;
+    if(!recs.length){
+      document.getElementById('content').innerHTML='<div class="empty">No emails sent yet.<br>Send some from the <a href="outreach.html">Outreach page</a>.</div>';
+      return;
+    }
+    var anyUnknown=recs.some(function(r){return r.replied===null||r.replied===undefined;});
+    var rowsHtml=recs.map(function(r){
+      var issue=r.category?('<div class="sub">'+esc(ISSUE[r.category]||r.category)+'</div>'):'';
+      return '<tr><td><b>'+esc(r.business||r.to)+'</b>'+issue+'</td>'
+        +'<td class="sub">'+esc(r.to)+'</td>'
+        +'<td>'+esc(r.subject||'')+'</td>'
+        +'<td class="mono sub">'+when(r.sentAt)+'</td>'
+        +'<td>'+replyPill(r)+(r.replied===true&&r.repliedAt?'<div class="sub">'+when(r.repliedAt)+'</div>':'')+'</td></tr>';
+    }).join('');
+    document.getElementById('content').innerHTML=
+      '<div class="tbl-wrap"><table><thead><tr><th>Business</th><th>Email</th><th>Subject</th><th>Sent</th><th>Reply</th></tr></thead><tbody>'+rowsHtml+'</tbody></table></div>';
+    if(anyUnknown){
+      document.getElementById('note').innerHTML='Reply status shows “unknown” when the Gmail token can’t read your inbox. To enable reply detection, the refresh token needs a read scope (gmail.readonly). Sending still works without it.';
+    }
+  }).catch(function(e){
+    btn.disabled=false; btn.textContent='Refresh & check replies';
+    document.getElementById('content').innerHTML='<div class="empty">'+esc(String(e))+'</div>';
+  });
+}
+load();
+</script>
+</body>
+</html>
