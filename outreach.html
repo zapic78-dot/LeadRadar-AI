@@ -96,23 +96,14 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:30px}
     <p>Every target from your scan, split out with a ready email. Verify each, then send.</p>
   </div>
 
-  <div class="card">
-    <div class="row">
-      <div class="field"><label>Your name (signature)</label><input id="sigName" placeholder="e.g. Alex"></div>
-      <div class="field"><label>Your company</label><input id="sigCo" placeholder="Zapic Digital US"></div>
-    </div>
-    <div style="font-size:12px;color:var(--muted)">Used in the signature of every email. Change it and click “Rebuild drafts”.</div>
-  </div>
-
   <div class="topbar">
     <button class="btn btn-ghost btn-sm" onclick="rebuild()">Rebuild drafts</button>
-    <button class="btn btn-primary btn-sm" id="sendAllBtn" onclick="sendAll()">Send all ready ▸</button>
     <span class="count" id="count"></span>
   </div>
 
   <div id="list"></div>
 
-  <footer>LeadRadar AI · Zapic Digital US · nothing sends until you click Send</footer>
+  <footer>LeadRadar AI · Zapic Digital US · Send opens Gmail pre-filled — you press Send there</footer>
 </main>
 
 <script>
@@ -125,16 +116,6 @@ function applyTheme(){ document.documentElement.setAttribute('data-theme',theme)
 function toggleTheme(){ theme = theme==='dark'?'light':'dark'; SS('lr_theme',theme); applyTheme(); }
 applyTheme();
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
-
-/* ---------------- signature ---------------- */
-document.getElementById('sigName').value = LS('lr_sig_name','');
-document.getElementById('sigCo').value   = LS('lr_sig_co','Zapic Digital US');
-function sig(){
-  var n=document.getElementById('sigName').value.trim();
-  var c=document.getElementById('sigCo').value.trim();
-  SS('lr_sig_name',n); SS('lr_sig_co',c);
-  return [n,c].filter(Boolean).join('\n');
-}
 
 /* ---------------- categories + FIXED email format ---------------- */
 var ISSUE = { no_website:'No website found', no_gbp:'No Google Business Profile', incomplete_gbp:'Google listing needs an upgrade', general:'Selected lead' };
@@ -151,25 +132,8 @@ function buildSubject(cat, name){
   return name + ' — quick question about your business';
 }
 function buildBody(cat, name){
-  var foot = '\n\nBest,\n' + (sig() || '');
-  if(cat==='no_website'){
-    return 'Hi ' + name + ',\n\n'
-      + 'Issue found: no website. When people search for ' + name + ", there's no website for them to land on — so those customers usually end up going to a competitor who has one.\n\n"
-      + 'I build simple, fast websites for local businesses and would be glad to get one live for you. Open to a quick chat?' + foot;
-  }
-  if(cat==='no_gbp'){
-    return 'Hi ' + name + ',\n\n'
-      + 'Issue found: no Google Business Profile. ' + name + " isn't showing up on Google Maps or local search, which is exactly where most customers look first — so it's costing you calls and visits every week.\n\n"
-      + 'I can get you set up and verified on Google. Want me to take care of it?' + foot;
-  }
-  if(cat==='incomplete_gbp'){
-    return 'Hi ' + name + ',\n\n'
-      + 'Issue found: your Google listing needs an upgrade. It\'s live, but it\'s missing key details (photos, hours, or a description) that make people trust it and choose you. Completing it usually brings in noticeably more calls and visits.\n\n'
-      + 'I can upgrade your listing quickly. Interested in a quick look?' + foot;
-  }
-  return 'Hi ' + name + ',\n\n'
-    + 'I came across ' + name + ' and help local businesses get found by more customers online — websites, Google Business Profiles, and more.\n\n'
-    + 'Would you be open to a quick chat about it?' + foot;
+  // Same simple body for every email — no signature, no issue paragraph.
+  return 'hi\n\n' + 'I came across ' + name + ' and help local businesses get found by more customers online — websites, Google Business Profiles, and more';
 }
 
 /* ---------------- load handed-off results ---------------- */
@@ -189,17 +153,16 @@ function rebuild(){
 
   if(!results.length){
     listEl.innerHTML = '<div class="empty">No scan results found.<br>Run a scan on the <a href="index.html">Scan page</a> first, then come back.</div>';
-    document.getElementById('count').textContent=''; document.getElementById('sendAllBtn').disabled=true; return;
+    document.getElementById('count').textContent=''; return;
   }
   if(!targets.length){
     listEl.innerHTML = '<div class="empty">Your scan had '+results.length+' businesses, but none match your three targets (all have a site + complete listing).</div>';
-    document.getElementById('count').textContent=''; document.getElementById('sendAllBtn').disabled=true; return;
+    document.getElementById('count').textContent=''; return;
   }
 
   cards = targets.map(function(t,idx){ return {r:t.r, cat:t.cat, idx:idx, sent:false}; });
   listEl.innerHTML = cards.map(cardHtml).join('');
   cards.forEach(wire);
-  document.getElementById('sendAllBtn').disabled=false;
   updateCount();
 }
 
@@ -230,7 +193,7 @@ function wire(c){
   var el = document.getElementById('card'+c.idx);
   c.el=el; c.toEl=el.querySelector('.f-to'); c.subEl=el.querySelector('.f-sub');
   c.bodyEl=el.querySelector('.f-body'); c.statusEl=el.querySelector('.cardstatus');
-  el.querySelector('.b-send').onclick = function(){ sendCard(c); };
+  el.querySelector('.b-send').onclick = function(){ openInGmail(c); };
   el.querySelector('.b-skip').onclick = function(){ el.style.display='none'; updateCount(); };
   el.querySelector('.b-ai').onclick = function(e){ polishCard(c, e.target); };
 }
@@ -238,17 +201,35 @@ function wire(c){
 function setStatus(c, html, cls){ c.statusEl.className='cardstatus'+(cls?' '+cls:''); c.statusEl.innerHTML=html; }
 function post(path, payload){ return fetch(worker+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(function(r){return r.json();}); }
 
-function sendCard(c){
+function openInGmail(c){
   var to = c.toEl.value.trim();
-  if(!to){ setStatus(c,'add a recipient first','err'); return Promise.resolve(); }
-  setStatus(c,'<span class="spin"></span>sending…');
-  return post('/outreach/send',{ to:to, subject:c.subEl.value, body:c.bodyEl.value, business:c.r.name, category:c.cat }).then(function(r){
-    if(r && r.ok){
-      c.sent=true; c.el.className='card lead sent';
-      var b=c.el.querySelector('.badge'); b.className='badge sent'; b.textContent='SENT';
-      setStatus(c,'sent ✓','ok'); updateCount();
-    } else setStatus(c, esc((r&&r.error)||'send failed'),'err');
-  }).catch(function(e){ setStatus(c, esc(String(e)),'err'); });
+  var su = c.subEl.value;
+  var body = c.bodyEl.value;
+  // Open Gmail's compose window with To / Subject / Body pre-filled.
+  var url = 'https://mail.google.com/mail/?view=cm&fs=1'
+    + '&to=' + encodeURIComponent(to)
+    + '&su=' + encodeURIComponent(su)
+    + '&body=' + encodeURIComponent(body);
+  window.open(url, '_blank');
+
+  logSent(c, to);               // record it for the Records page
+  c.sent = true;
+  c.el.className = 'card lead sent';
+  var b = c.el.querySelector('.badge'); b.className = 'badge sent'; b.textContent = 'OPENED';
+  setStatus(c, 'opened in Gmail — press Send there', 'ok');
+  updateCount();
+}
+
+function logSent(c, to){
+  try{
+    var arr = JSON.parse(LS('lr_sent','[]')) || [];
+    arr.unshift({
+      id: 's' + Date.now() + Math.random().toString(36).slice(2,7),
+      business: c.r.name, to: to, category: c.cat,
+      subject: c.subEl.value, sentAt: Date.now(), replied: false
+    });
+    SS('lr_sent', JSON.stringify(arr));
+  }catch(e){}
 }
 
 function polishCard(c, btn){
@@ -258,21 +239,6 @@ function polishCard(c, btn){
     if(r && r.ok){ c.subEl.value=r.subject; c.bodyEl.value=r.body; setStatus(c,'updated','ok'); }
     else setStatus(c, esc((r&&r.error)||'AI unavailable (needs GEMINI_API_KEY)'),'err');
   }).catch(function(e){ btn.disabled=false; setStatus(c, esc(String(e)),'err'); });
-}
-
-function sendAll(){
-  var pending = cards.filter(function(c){ return !c.sent && c.el.style.display!=='none' && c.toEl.value.trim(); });
-  if(!pending.length){ alert('Nothing ready to send (each needs a recipient email).'); return; }
-  if(!confirm('Send '+pending.length+' emails now? They go out one at a time, ~10s apart, to protect your Gmail account. Keep this tab open.')) return;
-  document.getElementById('sendAllBtn').disabled=true;
-  var i=0;
-  (function step(){
-    if(i>=pending.length){ document.getElementById('sendAllBtn').disabled=false; return; }
-    sendCard(pending[i]).then(function(){
-      i++;
-      if(i<pending.length) setTimeout(step, 10000); else document.getElementById('sendAllBtn').disabled=false;
-    });
-  })();
 }
 
 function updateCount(){
