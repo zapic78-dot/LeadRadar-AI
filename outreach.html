@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>LeadRadar AI — Outreach</title>
+<meta name="theme-color" content="#0A1218">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23101B22'/><circle cx='50' cy='50' r='30' fill='none' stroke='%23E8930C' stroke-width='4'/><circle cx='50' cy='50' r='14' fill='none' stroke='%23E8930C' stroke-width='4'/><circle cx='66' cy='38' r='6' fill='%23E8930C'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--radius:14px;--radius-sm:10px;--signal:#F0A032;--signal-deep:#C97F12;--ease:cubic-bezier(.22,.8,.3,1)}
+:root[data-theme="dark"]{--bg:#0A1218;--glass:rgba(255,255,255,.045);--glass-2:rgba(255,255,255,.07);--line:rgba(255,255,255,.09);--line-strong:rgba(255,255,255,.16);--ink:#E9F0F3;--ink-2:#C4D2D9;--muted:#8CA0AA;--good:#3FBF77;--good-bg:rgba(63,191,119,.12);--bad:#F26D5B;--bad-bg:rgba(242,109,91,.12);--mid-bg:rgba(240,160,50,.14);--blue:#5aa9f0;--blue-bg:rgba(90,169,240,.14);--chip:#16232D;--shadow:0 8px 30px rgba(0,0,0,.35);--head:rgba(10,18,24,.72);--glow-a:rgba(240,160,50,.10);--glow-b:rgba(20,85,90,.22)}
+:root[data-theme="light"]{--bg:#EDF1F3;--glass:rgba(255,255,255,.66);--glass-2:rgba(255,255,255,.88);--line:rgba(16,27,34,.10);--line-strong:rgba(16,27,34,.20);--ink:#101B22;--ink-2:#2A3B45;--muted:#65757D;--good:#1E7A46;--good-bg:#E1F2E8;--bad:#B3372B;--bad-bg:#F9E6E3;--mid-bg:#FBEED6;--blue:#2f6fb0;--blue-bg:#E3EEFA;--chip:#F3F6F7;--shadow:0 2px 6px rgba(16,27,34,.06),0 10px 30px rgba(16,27,34,.08);--head:rgba(237,241,243,.8);--glow-a:rgba(232,147,12,.12);--glow-b:rgba(20,85,90,.10)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Barlow',system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.5;min-height:100vh}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(560px 380px at 82% -6%,var(--glow-a),transparent 65%),radial-gradient(680px 480px at -10% 30%,var(--glow-b),transparent 60%)}
+button{font-family:inherit;cursor:pointer}
+input,textarea{font-family:inherit;font-size:15px;color:var(--ink)}
+.mono{font-family:'IBM Plex Mono',monospace}
+header{background:var(--head);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--line);padding:10px 18px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:50}
+.logo{width:36px;height:36px;flex:none}
+.brand h1{font-family:'Barlow Condensed';font-size:21px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;line-height:1;color:var(--ink)}
+.brand span{font-size:10px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase}
+.nav{margin-left:auto;display:flex;gap:8px;align-items:center}
+.nav a{font-size:13px;font-weight:600;color:var(--ink-2);text-decoration:none;padding:8px 12px;border:1px solid var(--line);border-radius:99px}
+.nav a.active{color:var(--signal);border-color:var(--signal)}
+.theme-btn{flex:none;border:1px solid var(--line);background:var(--glass);color:var(--ink);width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px}
+main{max-width:860px;margin:0 auto;padding:24px 16px 90px}
+.hero{margin:14px 0 18px}
+.hero h2{font-family:'Barlow Condensed';font-size:30px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.hero p{color:var(--muted);font-size:15px;margin-top:4px}
+.card{background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;margin-bottom:14px}
+label{display:block;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+input,textarea{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--glass-2)}
+input:focus,textarea:focus{outline:none;border-color:var(--signal);box-shadow:0 0 0 3px var(--mid-bg)}
+textarea{resize:vertical;line-height:1.6}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.row>div{flex:1;min-width:200px}
+.field{margin-bottom:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:var(--radius-sm);padding:11px 18px;font-weight:600;font-size:14px;transition:transform .15s var(--ease)}
+.btn:hover{transform:translateY(-1px)}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(180deg,#F7AE45,var(--signal));color:#1B1204;box-shadow:0 6px 18px rgba(240,160,50,.28)}
+.btn-primary:disabled{background:var(--chip);color:var(--muted);box-shadow:none;cursor:default;transform:none}
+.btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink-2)}
+.btn-ghost:hover{border-color:var(--line-strong)}
+.btn-sm{padding:8px 13px;font-size:13px}
+.topbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.count{color:var(--muted);font-size:14px}
+.lead{border-left:3px solid var(--line)}
+.lead.no_website{border-left-color:var(--bad)}
+.lead.no_gbp{border-left-color:var(--signal)}
+.lead.incomplete_gbp{border-left-color:var(--blue)}
+.lead.general{border-left-color:var(--line-strong)}
+.lead.sent{border-left-color:var(--good)}
+.lhead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:2px}
+.lname{font-weight:700;font-size:17px}
+.lmeta{font-size:12px;color:var(--muted);margin-bottom:12px}
+.badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;white-space:nowrap;text-transform:uppercase;letter-spacing:.03em}
+.badge.no_website{background:var(--bad-bg);color:var(--bad)}
+.badge.no_gbp{background:var(--mid-bg);color:var(--signal-deep)}
+:root[data-theme="dark"] .badge.no_gbp{color:var(--signal)}
+.badge.incomplete_gbp{background:var(--blue-bg);color:var(--blue)}
+.badge.general{background:var(--chip);color:var(--muted)}
+.badge.sent{background:var(--good-bg);color:var(--good)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px}
+.cardstatus{font-size:12px;color:var(--muted);margin-left:auto}
+.cardstatus.err{color:var(--bad)}
+.cardstatus.ok{color:var(--good)}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid var(--muted);border-top-color:transparent;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:5px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.empty{text-align:center;color:var(--muted);padding:50px 20px}
+.empty a{color:var(--signal)}
+.warn{color:var(--signal-deep);font-size:12px}
+:root[data-theme="dark"] .warn{color:var(--signal)}
+footer{color:var(--muted);font-size:12px;text-align:center;margin-top:30px}
+</style>
+</head>
+<body>
+<header>
+  <svg class="logo" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#101B22" stroke="#2A3B45"/><circle cx="50" cy="50" r="30" fill="none" stroke="#E8930C" stroke-width="4"/><circle cx="50" cy="50" r="14" fill="none" stroke="#E8930C" stroke-width="4"/><circle cx="66" cy="38" r="6" fill="#E8930C"/></svg>
+  <div class="brand"><h1>LeadRadar AI</h1><span>Outreach</span></div>
+  <nav class="nav">
+    <a href="index.html">Scan</a>
+    <a href="outreach.html" class="active">Outreach</a>
+    <a href="records.html">Records</a>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" aria-label="Theme">☀️</button>
+  </nav>
+</header>
+
+<main>
+  <div class="hero">
+    <h2>Review &amp; Send</h2>
+    <p>Every target from your scan, split out with a ready email. Verify each, then send.</p>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div class="field"><label>Your name (signature)</label><input id="sigName" placeholder="e.g. Alex"></div>
+      <div class="field"><label>Your company</label><input id="sigCo" placeholder="Zapic Digital US"></div>
+    </div>
+    <div style="font-size:12px;color:var(--muted)">Used in the signature of every email. Change it and click “Rebuild drafts”.</div>
+  </div>
+
+  <div class="topbar">
+    <button class="btn btn-ghost btn-sm" onclick="rebuild()">Rebuild drafts</button>
+    <button class="btn btn-primary btn-sm" id="sendAllBtn" onclick="sendAll()">Send all ready ▸</button>
+    <span class="count" id="count"></span>
+  </div>
+
+  <div id="list"></div>
+
+  <footer>LeadRadar AI · Zapic Digital US · nothing sends until you click Send</footer>
+</main>
+
+<script>
+/* ---------------- settings / theme ---------------- */
+function LS(k,d){ try{ var v=localStorage.getItem(k); return v===null?d:v; }catch(e){ return d; } }
+function SS(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+var worker = (LS('lr_worker','https://ledradar.zapic78.workers.dev')).replace(/\/+$/,'');
+var theme = LS('lr_theme','dark');
+function applyTheme(){ document.documentElement.setAttribute('data-theme',theme); document.getElementById('themeBtn').textContent = theme==='dark'?'☀️':'🌙'; }
+function toggleTheme(){ theme = theme==='dark'?'light':'dark'; SS('lr_theme',theme); applyTheme(); }
+applyTheme();
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+
+/* ---------------- signature ---------------- */
+document.getElementById('sigName').value = LS('lr_sig_name','');
+document.getElementById('sigCo').value   = LS('lr_sig_co','Zapic Digital US');
+function sig(){
+  var n=document.getElementById('sigName').value.trim();
+  var c=document.getElementById('sigCo').value.trim();
+  SS('lr_sig_name',n); SS('lr_sig_co',c);
+  return [n,c].filter(Boolean).join('\n');
+}
+
+/* ---------------- categories + FIXED email format ---------------- */
+var ISSUE = { no_website:'No website found', no_gbp:'No Google Business Profile', incomplete_gbp:'Google listing needs an upgrade', general:'Selected lead' };
+function pickCategory(r){
+  if(!r.hasGBP) return 'no_gbp';
+  if(!r.hasWebsite) return 'no_website';
+  if(r.gbpStatus === 'incomplete') return 'incomplete_gbp';
+  return null;
+}
+function buildSubject(cat, name){
+  if(cat==='no_website') return name + ' — no website found for your business';
+  if(cat==='no_gbp')     return name + " — you're missing from Google Business Profile";
+  if(cat==='incomplete_gbp') return name + ' — your Google listing needs an upgrade';
+  return name + ' — quick question about your business';
+}
+function buildBody(cat, name){
+  var foot = '\n\nBest,\n' + (sig() || '');
+  if(cat==='no_website'){
+    return 'Hi ' + name + ',\n\n'
+      + 'Issue found: no website. When people search for ' + name + ", there's no website for them to land on — so those customers usually end up going to a competitor who has one.\n\n"
+      + 'I build simple, fast websites for local businesses and would be glad to get one live for you. Open to a quick chat?' + foot;
+  }
+  if(cat==='no_gbp'){
+    return 'Hi ' + name + ',\n\n'
+      + 'Issue found: no Google Business Profile. ' + name + " isn't showing up on Google Maps or local search, which is exactly where most customers look first — so it's costing you calls and visits every week.\n\n"
+      + 'I can get you set up and verified on Google. Want me to take care of it?' + foot;
+  }
+  if(cat==='incomplete_gbp'){
+    return 'Hi ' + name + ',\n\n'
+      + 'Issue found: your Google listing needs an upgrade. It\'s live, but it\'s missing key details (photos, hours, or a description) that make people trust it and choose you. Completing it usually brings in noticeably more calls and visits.\n\n'
+      + 'I can upgrade your listing quickly. Interested in a quick look?' + foot;
+  }
+  return 'Hi ' + name + ',\n\n'
+    + 'I came across ' + name + ' and help local businesses get found by more customers online — websites, Google Business Profiles, and more.\n\n'
+    + 'Would you be open to a quick chat about it?' + foot;
+}
+
+/* ---------------- load handed-off results ---------------- */
+function loadResults(){ try{ return JSON.parse(LS('lr_results','[]')) || []; }catch(e){ return []; } }
+
+var cards = [];
+
+function rebuild(){
+  var results = loadResults();
+  var mode = LS('lr_mode','all');
+  var targets = results.map(function(r){
+    var cat = pickCategory(r);
+    if(!cat && mode==='picked') cat='general'; // you chose it -> always show it
+    return {r:r, cat:cat};
+  }).filter(function(x){ return x.cat; });
+  var listEl = document.getElementById('list');
+
+  if(!results.length){
+    listEl.innerHTML = '<div class="empty">No scan results found.<br>Run a scan on the <a href="index.html">Scan page</a> first, then come back.</div>';
+    document.getElementById('count').textContent=''; document.getElementById('sendAllBtn').disabled=true; return;
+  }
+  if(!targets.length){
+    listEl.innerHTML = '<div class="empty">Your scan had '+results.length+' businesses, but none match your three targets (all have a site + complete listing).</div>';
+    document.getElementById('count').textContent=''; document.getElementById('sendAllBtn').disabled=true; return;
+  }
+
+  cards = targets.map(function(t,idx){ return {r:t.r, cat:t.cat, idx:idx, sent:false}; });
+  listEl.innerHTML = cards.map(cardHtml).join('');
+  cards.forEach(wire);
+  document.getElementById('sendAllBtn').disabled=false;
+  updateCount();
+}
+
+function cardHtml(c){
+  var name = c.r.name, to = c.r.email || '';
+  var subject = buildSubject(c.cat, name), body = buildBody(c.cat, name);
+  var meta = [];
+  if(c.r.googleName && c.r.googleName!==name) meta.push('Google: '+esc(c.r.googleName));
+  meta.push('Website: '+(c.r.hasWebsite?'yes':'no'));
+  if(c.r.phone) meta.push('Phone: '+esc(c.r.phone));
+  var noEmail = !to;
+  return '<div class="card lead '+c.cat+'" id="card'+c.idx+'">'
+    + '<div class="lhead"><div class="lname">'+esc(name)+'</div>'
+    + '<span class="badge '+c.cat+'">'+esc(ISSUE[c.cat])+'</span></div>'
+    + '<div class="lmeta">'+meta.join(' · ')+'</div>'
+    + '<div class="field"><label>To</label><input class="f-to" value="'+esc(to)+'" placeholder="'+(noEmail?'no email found — enter one':'')+'"></div>'
+    + '<div class="field"><label>Subject (issue)</label><input class="f-sub" value="'+esc(subject)+'"></div>'
+    + '<div class="field"><label>Body</label><textarea class="f-body" rows="10">'+esc(body)+'</textarea></div>'
+    + '<div class="actions">'
+    +   '<button class="btn btn-primary btn-sm b-send">Send</button>'
+    +   '<button class="btn btn-ghost btn-sm b-ai">Improve with AI</button>'
+    +   '<button class="btn btn-ghost btn-sm b-skip">Skip</button>'
+    +   '<span class="cardstatus">'+(noEmail?'<span class="warn">no email — add one</span>':'ready')+'</span>'
+    + '</div></div>';
+}
+
+function wire(c){
+  var el = document.getElementById('card'+c.idx);
+  c.el=el; c.toEl=el.querySelector('.f-to'); c.subEl=el.querySelector('.f-sub');
+  c.bodyEl=el.querySelector('.f-body'); c.statusEl=el.querySelector('.cardstatus');
+  el.querySelector('.b-send').onclick = function(){ sendCard(c); };
+  el.querySelector('.b-skip').onclick = function(){ el.style.display='none'; updateCount(); };
+  el.querySelector('.b-ai').onclick = function(e){ polishCard(c, e.target); };
+}
+
+function setStatus(c, html, cls){ c.statusEl.className='cardstatus'+(cls?' '+cls:''); c.statusEl.innerHTML=html; }
+function post(path, payload){ return fetch(worker+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(function(r){return r.json();}); }
+
+function sendCard(c){
+  var to = c.toEl.value.trim();
+  if(!to){ setStatus(c,'add a recipient first','err'); return Promise.resolve(); }
+  setStatus(c,'<span class="spin"></span>sending…');
+  return post('/outreach/send',{ to:to, subject:c.subEl.value, body:c.bodyEl.value, business:c.r.name, category:c.cat }).then(function(r){
+    if(r && r.ok){
+      c.sent=true; c.el.className='card lead sent';
+      var b=c.el.querySelector('.badge'); b.className='badge sent'; b.textContent='SENT';
+      setStatus(c,'sent ✓','ok'); updateCount();
+    } else setStatus(c, esc((r&&r.error)||'send failed'),'err');
+  }).catch(function(e){ setStatus(c, esc(String(e)),'err'); });
+}
+
+function polishCard(c, btn){
+  btn.disabled=true; setStatus(c,'<span class="spin"></span>polishing…');
+  post('/outreach/polish',{ subject:c.subEl.value, body:c.bodyEl.value }).then(function(r){
+    btn.disabled=false;
+    if(r && r.ok){ c.subEl.value=r.subject; c.bodyEl.value=r.body; setStatus(c,'updated','ok'); }
+    else setStatus(c, esc((r&&r.error)||'AI unavailable (needs GEMINI_API_KEY)'),'err');
+  }).catch(function(e){ btn.disabled=false; setStatus(c, esc(String(e)),'err'); });
+}
+
+function sendAll(){
+  var pending = cards.filter(function(c){ return !c.sent && c.el.style.display!=='none' && c.toEl.value.trim(); });
+  if(!pending.length){ alert('Nothing ready to send (each needs a recipient email).'); return; }
+  if(!confirm('Send '+pending.length+' emails now? They go out one at a time, ~10s apart, to protect your Gmail account. Keep this tab open.')) return;
+  document.getElementById('sendAllBtn').disabled=true;
+  var i=0;
+  (function step(){
+    if(i>=pending.length){ document.getElementById('sendAllBtn').disabled=false; return; }
+    sendCard(pending[i]).then(function(){
+      i++;
+      if(i<pending.length) setTimeout(step, 10000); else document.getElementById('sendAllBtn').disabled=false;
+    });
+  })();
+}
+
+function updateCount(){
+  var visible = cards.filter(function(c){ return c.el && c.el.style.display!=='none'; });
+  var sent = visible.filter(function(c){ return c.sent; }).length;
+  document.getElementById('count').textContent = visible.length+' targets · '+sent+' sent';
+}
+
+rebuild();
+</script>
+</body>
+</html>
