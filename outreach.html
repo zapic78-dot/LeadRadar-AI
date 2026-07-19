@@ -93,7 +93,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:30px}
 <main>
   <div class="hero">
     <h2>Review &amp; Send</h2>
-    <p>Every target from your scan, split out with a ready email. Verify each, then send.</p>
+    <p>Every target from your scan, split out with a ready email. Verify each, then send — sends automatically, no popup.</p>
   </div>
 
   <div class="topbar">
@@ -103,7 +103,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:30px}
 
   <div id="list"></div>
 
-  <footer>LeadRadar AI · Zapic Digital US · Send opens Gmail pre-filled — you press Send there</footer>
+  <footer>LeadRadar AI · Zapic Digital US · Send queues the email with the Worker — it goes out automatically within ~90 seconds, no manual step</footer>
 </main>
 
 <script>
@@ -132,7 +132,6 @@ function buildSubject(cat, name){
   return name + ' — quick question about your business';
 }
 function buildBody(cat, name){
-  // Same simple body for every email — no signature, no issue paragraph.
   return 'hi\n\n' + 'I came across ' + name + ' and help local businesses get found by more customers online — websites, Google Business Profiles, and more';
 }
 
@@ -146,7 +145,7 @@ function rebuild(){
   var mode = LS('lr_mode','all');
   var targets = results.map(function(r){
     var cat = pickCategory(r);
-    if(!cat && mode==='picked') cat='general'; // you chose it -> always show it
+    if(!cat && mode==='picked') cat='general';
     return {r:r, cat:cat};
   }).filter(function(x){ return x.cat; });
   var listEl = document.getElementById('list');
@@ -193,7 +192,7 @@ function wire(c){
   var el = document.getElementById('card'+c.idx);
   c.el=el; c.toEl=el.querySelector('.f-to'); c.subEl=el.querySelector('.f-sub');
   c.bodyEl=el.querySelector('.f-body'); c.statusEl=el.querySelector('.cardstatus');
-  el.querySelector('.b-send').onclick = function(){ openInGmail(c); };
+  el.querySelector('.b-send').onclick = function(e){ sendCard(c, e.target); };
   el.querySelector('.b-skip').onclick = function(){ el.style.display='none'; updateCount(); };
   el.querySelector('.b-ai').onclick = function(e){ polishCard(c, e.target); };
 }
@@ -201,23 +200,42 @@ function wire(c){
 function setStatus(c, html, cls){ c.statusEl.className='cardstatus'+(cls?' '+cls:''); c.statusEl.innerHTML=html; }
 function post(path, payload){ return fetch(worker+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(function(r){return r.json();}); }
 
-function openInGmail(c){
+/* ---------------- REAL send: queues with the Worker, which sends automatically ---------------- */
+function sendCard(c, btn){
   var to = c.toEl.value.trim();
   var su = c.subEl.value;
   var body = c.bodyEl.value;
-  // Open Gmail's compose window with To / Subject / Body pre-filled.
-  var url = 'https://mail.google.com/mail/?view=cm&fs=1&tf=1'
-    + '&to=' + encodeURIComponent(to)
-    + '&su=' + encodeURIComponent(su)
-    + '&body=' + encodeURIComponent(body);
-  window.open(url, '_blank');
 
-  logSent(c, to);               // record it for the Records page
-  c.sent = true;
-  c.el.className = 'card lead sent';
-  var b = c.el.querySelector('.badge'); b.className = 'badge sent'; b.textContent = 'OPENED';
-  setStatus(c, 'opened in Gmail — press Send there', 'ok');
-  updateCount();
+  if(!to){ setStatus(c, 'add an email first', 'err'); return; }
+
+  btn.disabled = true;
+  setStatus(c, '<span class="spin"></span>queueing…');
+
+  post('/queue-approved', {
+    businesses: [{
+      name: c.r.name,
+      address: c.r.address || '',
+      email: to,
+      category: c.cat,
+      subject: su,
+      body: body
+    }]
+  }).then(function(r){
+    btn.disabled = false;
+    if(r && r.ok){
+      logSent(c, to);
+      c.sent = true;
+      c.el.className = 'card lead sent';
+      var b = c.el.querySelector('.badge'); b.className = 'badge sent'; b.textContent = 'QUEUED';
+      setStatus(c, 'queued — sends automatically within ~90s', 'ok');
+      updateCount();
+    } else {
+      setStatus(c, esc((r && r.error) || 'queue failed'), 'err');
+    }
+  }).catch(function(e){
+    btn.disabled = false;
+    setStatus(c, esc(String(e)), 'err');
+  });
 }
 
 function logSent(c, to){
@@ -244,7 +262,7 @@ function polishCard(c, btn){
 function updateCount(){
   var visible = cards.filter(function(c){ return c.el && c.el.style.display!=='none'; });
   var sent = visible.filter(function(c){ return c.sent; }).length;
-  document.getElementById('count').textContent = visible.length+' targets · '+sent+' sent';
+  document.getElementById('count').textContent = visible.length+' targets · '+sent+' queued';
 }
 
 rebuild();
