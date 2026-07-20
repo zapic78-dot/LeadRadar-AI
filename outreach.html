@@ -126,13 +126,41 @@ function pickCategory(r){
   return null;
 }
 function buildSubject(cat, name){
-  if(cat==='no_website') return name + ' — no website found for your business';
-  if(cat==='no_gbp')     return name + " — you're missing from Google Business Profile";
-  if(cat==='incomplete_gbp') return name + ' — your Google listing needs an upgrade';
+  if(cat==='no_website') return name + ' — issue with your website';
+  if(cat==='no_gbp')     return name + ' — issue with your Google Business Profile';
+  if(cat==='incomplete_gbp') return name + ' — your Google Business Profile needs an update';
   return name + ' — quick question about your business';
 }
 function buildBody(cat, name){
-  return 'hi\n\n' + 'I came across ' + name + ' and help local businesses get found by more customers online — websites, Google Business Profiles, and more';
+  var issueLine;
+  if(cat==='no_website') issueLine = 'No website';
+  else if(cat==='no_gbp') issueLine = 'No Google Business Profile';
+  else if(cat==='incomplete_gbp') issueLine = 'Issue with your Google Business Profile';
+  else issueLine = 'A few opportunities to grow your online presence';
+
+  return 'Hi,\n\n'
+    + 'I came across your business, and I have found this issue: ' + issueLine + '\n\n'
+    + 'This is a common issue, and one that\'s easy to fix. Our mission is simple: help businesses like yours grow with practical, budget-friendly solutions.\n\n'
+    + 'How we can help:\n'
+    + '• Website Design & Development\n'
+    + '• Website Fixes & Redesign\n'
+    + '• Google Business Profile Setup & Optimization\n'
+    + '• Local SEO & Google Ranking\n'
+    + '• Social Media Management\n'
+    + '• Branding & Graphic Design\n'
+    + '• E-commerce Solutions\n'
+    + '• Website Maintenance & Support\n'
+    + '• Digital Marketing\n\n'
+    + 'I\'d welcome the opportunity to walk you through what I found and discuss a plan that fits your goals and budget — no obligation.\n\n'
+    + 'Looking forward to hearing from you.\n\n'
+    + 'Warm regards,\n'
+    + 'Addy Zam\n'
+    + 'Founder & CEO, Zapic Digital US\n'
+    + 'WEB DEVELOPMENT | AI AGENTS | E-COMMERCE | SEO\n'
+    + 'info@zapicdigitalus.com\n'
+    + 'https://zapicdigitalus.com\n'
+    + 'https://wa.me/12532909149\n'
+    + 'Seattle, WA';
 }
 
 /* ---------------- load handed-off results ---------------- */
