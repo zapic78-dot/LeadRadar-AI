@@ -52,7 +52,6 @@ textarea{resize:vertical;line-height:1.6}
 .lead{border-left:3px solid var(--line)}
 .lead.no_website{border-left-color:var(--bad)}
 .lead.no_gbp{border-left-color:var(--signal)}
-.lead.incomplete_gbp{border-left-color:var(--blue)}
 .lead.general{border-left-color:var(--line-strong)}
 .lead.sent{border-left-color:var(--good)}
 .lhead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:2px}
@@ -62,7 +61,6 @@ textarea{resize:vertical;line-height:1.6}
 .badge.no_website{background:var(--bad-bg);color:var(--bad)}
 .badge.no_gbp{background:var(--mid-bg);color:var(--signal-deep)}
 :root[data-theme="dark"] .badge.no_gbp{color:var(--signal)}
-.badge.incomplete_gbp{background:var(--blue-bg);color:var(--blue)}
 .badge.general{background:var(--chip);color:var(--muted)}
 .badge.sent{background:var(--good-bg);color:var(--good)}
 .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px}
@@ -117,50 +115,63 @@ function toggleTheme(){ theme = theme==='dark'?'light':'dark'; SS('lr_theme',the
 applyTheme();
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
 
-/* ---------------- categories + FIXED email format ---------------- */
-var ISSUE = { no_website:'No website found', no_gbp:'No Google Business Profile', incomplete_gbp:'Google listing needs an upgrade', general:'Growth opportunity' };
+/* ---------------- categories + FIXED email format (3 buckets, matches worker.js) ---------------- */
+var ISSUE = { no_website:'No website found', no_gbp:'Google listing missing/incomplete', general:'Growth opportunity' };
 function pickCategory(r){
-  if(!r.hasGBP) return 'no_gbp';
   if(!r.hasWebsite) return 'no_website';
-  if(r.gbpStatus === 'incomplete') return 'incomplete_gbp';
+  if(!r.hasGBP || r.gbpStatus === 'incomplete') return 'no_gbp';
   return 'general'; // has website + complete GBP — still a candidate for other services
 }
 function buildSubject(cat, name){
-  if(cat==='no_website') return name + ' — issue with your website';
-  if(cat==='no_gbp')     return name + ' — issue with your Google Business Profile';
-  if(cat==='incomplete_gbp') return name + ' — your Google Business Profile needs an update';
-  return name + ' — a few ways we could help you grow online';
+  if(cat==='no_website') return name + ' — you\'re invisible to anyone searching online';
+  if(cat==='no_gbp')     return name + ' — you\'re missing from Google Maps and local search';
+  return name + ' — let\'s make your online presence work harder for you';
 }
-function buildBody(cat, name){
-  var issueLine;
-  if(cat==='no_website') issueLine = 'No website';
-  else if(cat==='no_gbp') issueLine = 'No Google Business Profile';
-  else if(cat==='incomplete_gbp') issueLine = 'Issue with your Google Business Profile';
-  else issueLine = 'A few opportunities to grow your online presence';
 
-  return 'Hi,\n\n'
-    + 'I came across your business, and I have found this issue: ' + issueLine + '\n\n'
-    + 'This is a common issue, and one that\'s easy to fix. Our mission is simple: help businesses like yours grow with practical, budget-friendly solutions.\n\n'
-    + 'How we can help:\n'
-    + '• Website Design & Development\n'
-    + '• Website Fixes & Redesign\n'
-    + '• Google Business Profile Setup & Optimization\n'
-    + '• Local SEO & Google Ranking\n'
-    + '• Social Media Management\n'
-    + '• Branding & Graphic Design\n'
-    + '• E-commerce Solutions\n'
-    + '• Website Maintenance & Support\n'
-    + '• Digital Marketing\n\n'
-    + 'I\'d welcome the opportunity to walk you through what I found and discuss a plan that fits your goals and budget — no obligation.\n\n'
-    + 'Looking forward to hearing from you.\n\n'
-    + 'Warm regards,\n'
-    + 'Addy Zam\n'
-    + 'Founder & CEO, Zapic Digital US\n'
-    + 'WEB DEVELOPMENT | AI AGENTS | E-COMMERCE | SEO\n'
-    + 'info@zapicdigitalus.com\n'
-    + 'https://zapicdigitalus.com\n'
-    + 'https://wa.me/12532909149\n'
-    + 'Seattle, WA';
+var SIGNATURE = '\n\nWarm regards,\n'
+  + 'Addy Zam\n'
+  + 'Founder & CEO, Zapic Digital US\n'
+  + 'WEB DEVELOPMENT | AI AGENTS | E-COMMERCE | SEO\n'
+  + 'info@zapicdigitalus.com\n'
+  + 'https://zapicdigitalus.com\n'
+  + 'https://wa.me/12532909149\n'
+  + 'Seattle, WA';
+
+var SERVICES = 'How we can help:\n'
+  + '• Website Design & Development\n'
+  + '• Website Fixes & Redesign\n'
+  + '• Google Business Profile Setup & Optimization\n'
+  + '• Local SEO & Google Ranking\n'
+  + '• Social Media Management\n'
+  + '• Branding & Graphic Design\n'
+  + '• E-commerce Solutions\n'
+  + '• Website Maintenance & Support\n'
+  + '• Digital Marketing\n\n';
+
+function buildBody(cat, name){
+  if(cat==='no_website'){
+    return 'Hi ' + name + ',\n\n'
+      + 'I came across your business and noticed you don\'t have a website. Here\'s the honest situation: when someone searches for a business like yours, or gets your name from a friend and looks you up, there\'s nowhere for them to land. No website means no way to show your work, your hours, your pricing, or why you\'re the better choice — so they scroll past you to a competitor who does have one.\n\n'
+      + 'A website isn\'t just a formality anymore, it\'s your first impression. It works for you 24/7: answering questions, building trust before anyone even calls, and turning random visitors into actual customers. Businesses that make this move typically see more inbound calls within weeks, simply because people can finally find and vet them online.\n\n'
+      + SERVICES
+      + 'I can have a clean, professional site built and live for you quickly — no long back-and-forth needed. I\'d welcome the chance to put together a quick preview so you can see it before deciding anything, no obligation.'
+      + SIGNATURE;
+  }
+  if(cat==='no_gbp'){
+    return 'Hi ' + name + ',\n\n'
+      + 'I came across your business and noticed your Google presence needs attention — either your Google Business Profile isn\'t set up yet, or it\'s missing key info like photos, hours, or a description. That matters more than most business owners realize: this is the very first thing people check before they call, visit, or choose you over a competitor.\n\n'
+      + 'The upside of getting this right is real. A complete, well-optimized Google Business Profile means you show up when nearby customers search for exactly what you offer, it builds instant trust, and it drives free, ongoing calls and foot traffic without spending a dollar on ads. The downside of leaving it as-is is just as real: every day it stays incomplete, you\'re handing those same customers straight to competitors who do show up.\n\n'
+      + SERVICES
+      + 'I can set this up properly for you — photos, hours, description, categories, the works — so you start showing up where it counts. I\'d welcome the opportunity to walk you through what I found, no obligation.'
+      + SIGNATURE;
+  }
+  // general — has website + GBP, upsell/upgrade angle
+  return 'Hi ' + name + ',\n\n'
+    + 'Good news first: you\'re already ahead of a lot of local businesses — you have a website and a Google Business Profile in place. That\'s the foundation most competitors are still missing.\n\n'
+    + 'But having them isn\'t the same as them working hard for you. This is where we usually step in: upgrading the website so it looks sharper, loads faster, and actually converts visitors into calls and bookings instead of just sitting there. Polishing the Google Business Profile with better photos, fresh posts, and review activity so it looks more active and trustworthy than the listings around it. And beyond that, there\'s real room to grow with SEO, social media, and our other services built specifically to bring you more customers.\n\n'
+    + SERVICES
+    + 'I\'d welcome the opportunity to put together a quick, no-obligation look at what an upgrade would look like for you.'
+    + SIGNATURE;
 }
 
 /* ---------------- load handed-off results ---------------- */
