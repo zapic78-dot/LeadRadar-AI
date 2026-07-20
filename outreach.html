@@ -280,10 +280,16 @@ function logSent(c, to){
 
 function polishCard(c, btn){
   btn.disabled=true; setStatus(c,'<span class="spin"></span>polishing…');
-  post('/outreach/polish',{ subject:c.subEl.value, body:c.bodyEl.value }).then(function(r){
+  post('/outreach/polish',{
+    name: c.r.name,
+    address: c.r.address || '',
+    category: c.cat,
+    subject: c.subEl.value,
+    body: c.bodyEl.value
+  }).then(function(r){
     btn.disabled=false;
     if(r && r.ok){ c.subEl.value=r.subject; c.bodyEl.value=r.body; setStatus(c,'updated','ok'); }
-    else setStatus(c, esc((r&&r.error)||'AI unavailable (needs GEMINI_API_KEY)'),'err');
+    else setStatus(c, esc((r&&r.error)||'AI unavailable'),'err');
   }).catch(function(e){ btn.disabled=false; setStatus(c, esc(String(e)),'err'); });
 }
 
