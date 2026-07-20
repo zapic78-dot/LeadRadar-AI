@@ -14,9 +14,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
-/* ============================================================
-   LeadRadar AI v13 — GROUND TRUTH — design tokens
-   ============================================================ */
 :root{
   --radius:14px;
   --radius-sm:10px;
@@ -91,8 +88,6 @@ a{color:var(--signal-deep)}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001s!important;transition-duration:.001s!important}
 }
-
-/* header */
 header{
   background:var(--head);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
   border-bottom:1px solid var(--line);
@@ -108,10 +103,7 @@ header{
   font-size:16px;transition:transform .3s var(--ease);
 }
 .theme-btn:hover{transform:rotate(24deg)}
-
 main{max-width:1100px;margin:0 auto;padding:24px 16px 90px}
-
-/* cards / fields */
 .card{
   background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);
@@ -131,7 +123,6 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 90px}
 .row2{display:flex;gap:12px;flex-wrap:wrap}
 .row2>.field{flex:1;min-width:230px}
 .hint{font-size:13px;color:var(--muted);margin-top:10px;line-height:1.5}
-
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;
   border-radius:var(--radius-sm);padding:13px 22px;font-weight:600;font-size:15px;
@@ -150,8 +141,6 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 90px}
 .btn-pdf:hover:not(:disabled){background:var(--mid-bg)}
 .btn-pdf:disabled{opacity:.35;cursor:default;transform:none}
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
-
-/* progress */
 .progress{max-width:720px;margin:16px auto 0;padding:16px 20px;display:none;align-items:center;gap:18px}
 .progress.on{display:flex}
 .radar{width:60px;height:60px;flex:none;border-radius:50%;position:relative;border:1px solid var(--line-strong);
@@ -164,8 +153,6 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 90px}
 .ptext{font-size:15px;margin-bottom:8px}
 .ptrack{height:9px;background:var(--chip);border-radius:99px;overflow:hidden}
 .pfill{height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,var(--signal-deep),var(--signal));transition:width .3s var(--ease)}
-
-/* chips */
 .chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:18px auto 12px}
 .chip{
   border:1px solid var(--line);background:var(--glass);color:var(--ink-2);
@@ -176,8 +163,6 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 90px}
 .chip.bad b{color:var(--bad)}
 .chip.amber b{color:var(--signal-deep)}
 :root[data-theme="dark"] .chip.amber b{color:var(--signal)}
-
-/* results table */
 .results{max-width:1100px;margin:0 auto;display:none}
 .results.on{display:block}
 .tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);background:var(--glass)}
@@ -199,6 +184,7 @@ td a{word-break:break-all;font-size:13px}
 .pickcell{text-align:center;width:36px}
 .pick,#pickAll{width:18px;height:18px;cursor:pointer;accent-color:var(--signal)}
 .pdfbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;justify-content:center}
+.dropnote{text-align:center;color:var(--muted);font-size:13px;margin-top:10px}
 footer{color:var(--muted);font-size:12px;text-align:center;margin-top:34px}
 </style>
 </head>
@@ -274,6 +260,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:34px}
         <tbody id="tbody"></tbody>
       </table>
     </div>
+    <div class="dropnote" id="dropNote" style="display:none"></div>
 
     <div class="pdfbar">
       <button class="btn btn-pdf" id="pdf1Btn" onclick="downloadPdf1()" disabled>PDF 1 — Email Leads</button>
@@ -282,15 +269,15 @@ footer{color:var(--muted);font-size:12px;text-align:center;margin-top:34px}
     </div>
     <div class="hint" style="text-align:center">
       PDF 1 = businesses with an email found (Business · Email · Phone · Website Y/N).<br>
-      PDF 2 = businesses with a phone found (Business · Phone · Website Y/N).
+      PDF 2 = businesses with a phone found (Business · Phone · Website Y/N).<br>
+      Businesses with neither an email nor a phone are automatically removed after the scan completes.
     </div>
   </div>
 
-  <footer>LeadRadar AI v13 · Zapic Digital US · data source: Google Places (verified)</footer>
+  <footer>LeadRadar AI v14 · Zapic Digital US · data source: Google Places (verified)</footer>
 </main>
 
 <script>
-/* ================= settings ================= */
 const S = {
   get worker(){ return localStorage.getItem('lr_worker') || 'https://ledradar.zapic78.workers.dev'; },
   set worker(v){ localStorage.setItem('lr_worker', v.trim().replace(/\/+$/,'')); },
@@ -308,7 +295,6 @@ function applyTheme(){
 function toggleTheme(){ S.theme = S.theme==='dark' ? 'light' : 'dark'; applyTheme(); }
 function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-/* ================= batch state ================= */
 let rows=[], running=false;
 
 function parseInput(){
@@ -350,6 +336,7 @@ async function startBatch(){
   document.getElementById('progress').classList.add('on');
   document.getElementById('pdf1Btn').disabled=true;
   document.getElementById('pdf2Btn').disabled=true;
+  document.getElementById('dropNote').style.display='none';
   renderTable(); updateProgress();
 
   const endpoint=S.worker+'/v13/verify';
@@ -366,18 +353,39 @@ async function startBatch(){
 }
 function stopBatch(){ running=false; }
 
+function dropDeadEnds(){
+  const before = rows.length;
+  rows = rows.filter(r=>{
+    if(!r.done) return true;
+    if(r.error) return true;
+    return !!(r.email || r.phone);
+  });
+  const removed = before - rows.length;
+  const note = document.getElementById('dropNote');
+  if(removed>0){
+    note.style.display='block';
+    note.textContent = removed + (removed===1?' business was':' businesses were') + ' removed automatically — no email or phone found for them.';
+  } else {
+    note.style.display='none';
+  }
+  picked = new Set();
+}
+
 function finishBatch(){
   running=false;
   document.getElementById('startBtn').disabled=false;
   document.getElementById('stopBtn').style.display='none';
   document.getElementById('progress').classList.remove('on');
+
+  dropDeadEnds();
+  renderTable();
+
   const done=rows.filter(r=>r.done&&!r.error);
   document.getElementById('pdf1Btn').disabled=!done.some(r=>r.email);
   document.getElementById('pdf2Btn').disabled=!done.some(r=>r.phone);
   updateOutreachBtn();
 }
 
-/* ---------- pick individual businesses -> send only those to page 2 ---------- */
 let picked = new Set();
 function togglePick(i, el){ if(el.checked) picked.add(i); else picked.delete(i); syncPickAll(); updateOutreachBtn(); }
 function toggleAll(el){
@@ -405,8 +413,6 @@ function packRows(list){
     email:r.email, gbpStatus:r.gbpStatus
   }));
 }
-/* Hand the chosen results to the outreach page (page 2). Additive only —
-   does not touch verify, the table logic, or the PDF exports above. */
 function goOutreach(){
   const done=rows.filter(r=>r.done&&!r.error);
   let list, mode;
@@ -444,7 +450,6 @@ async function verifyOne(endpoint,i,retry=true){
   renderRow(i); updateChips();
 }
 
-/* ================= render ================= */
 function renderTable(){
   document.getElementById('tbody').innerHTML =
     rows.map((r,i)=>'<tr id="row'+i+'">'+rowCells(r,i)+'</tr>').join('');
@@ -485,11 +490,11 @@ function updateChips(){
 }
 function updateProgress(){
   const done=rows.filter(r=>r.done).length;
-  document.getElementById('pFill').style.width=Math.round(done/rows.length*100)+'%';
+  const total=rows.length || 1;
+  document.getElementById('pFill').style.width=Math.round(done/total*100)+'%';
   document.getElementById('pText').textContent='Verified '+done+' / '+rows.length+' with Google';
 }
 
-/* ================= PDF exports ================= */
 function pdfBase(title){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({unit:'pt',format:'letter'});
@@ -539,7 +544,6 @@ function downloadPdf2(){
   doc.save('LeadRadar_Phone_Leads.pdf');
 }
 
-/* ================= init ================= */
 applyTheme();
 document.getElementById('workerUrl').value=S.worker;
 document.getElementById('areaSuffix').value=S.area;
