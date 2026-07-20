@@ -118,18 +118,18 @@ applyTheme();
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
 
 /* ---------------- categories + FIXED email format ---------------- */
-var ISSUE = { no_website:'No website found', no_gbp:'No Google Business Profile', incomplete_gbp:'Google listing needs an upgrade', general:'Selected lead' };
+var ISSUE = { no_website:'No website found', no_gbp:'No Google Business Profile', incomplete_gbp:'Google listing needs an upgrade', general:'Growth opportunity' };
 function pickCategory(r){
   if(!r.hasGBP) return 'no_gbp';
   if(!r.hasWebsite) return 'no_website';
   if(r.gbpStatus === 'incomplete') return 'incomplete_gbp';
-  return null;
+  return 'general'; // has website + complete GBP — still a candidate for other services
 }
 function buildSubject(cat, name){
   if(cat==='no_website') return name + ' — issue with your website';
   if(cat==='no_gbp')     return name + ' — issue with your Google Business Profile';
   if(cat==='incomplete_gbp') return name + ' — your Google Business Profile needs an update';
-  return name + ' — quick question about your business';
+  return name + ' — a few ways we could help you grow online';
 }
 function buildBody(cat, name){
   var issueLine;
@@ -170,12 +170,8 @@ var cards = [];
 
 function rebuild(){
   var results = loadResults();
-  var mode = LS('lr_mode','all');
-  var targets = results.map(function(r){
-    var cat = pickCategory(r);
-    if(!cat && mode==='picked') cat='general';
-    return {r:r, cat:cat};
-  }).filter(function(x){ return x.cat; });
+  var targets = results.filter(function(r){ return !!(r.email && r.email.trim()); })
+    .map(function(r){ return {r:r, cat: pickCategory(r)}; });
   var listEl = document.getElementById('list');
 
   if(!results.length){
@@ -183,7 +179,7 @@ function rebuild(){
     document.getElementById('count').textContent=''; return;
   }
   if(!targets.length){
-    listEl.innerHTML = '<div class="empty">Your scan had '+results.length+' businesses, but none match your three targets (all have a site + complete listing).</div>';
+    listEl.innerHTML = '<div class="empty">Your scan had '+results.length+' businesses, but none have an email address found. Email leads go here; phone-only leads belong on your call list from the Scan page PDF.</div>';
     document.getElementById('count').textContent=''; return;
   }
 
