@@ -384,28 +384,6 @@ function finishBatch(){
   document.getElementById('pdf1Btn').disabled=!done.some(r=>r.email);
   document.getElementById('pdf2Btn').disabled=!done.some(r=>r.phone);
   updateOutreachBtn();
-
-  autoRouteToOutreach(done);
-}
-
-// Full automation: the moment a scan finishes, if there's at least one usable
-// lead, jump straight to Outreach — no click needed. PDFs are still available
-// for a few seconds first in case you want them, and the manual "Outreach →"
-// button stays as a fallback if you navigate back or auto-route is skipped.
-function autoRouteToOutreach(done){
-  const note=document.getElementById('dropNote');
-  if(!done.length){
-    return; // nothing usable — stay on Scan, let the user see why
-  }
-  const existingNote = note.style.display==='block' ? note.textContent+' ' : '';
-  note.style.display='block';
-  let secs=3;
-  const tick=()=>{
-    note.textContent = existingNote + 'Routing '+done.length+' lead'+(done.length===1?'':'s')+' to Outreach in '+secs+'… (grab a PDF now if you want one first)';
-    if(secs<=0){ goOutreach(); return; }
-    secs--; setTimeout(tick,1000);
-  };
-  tick();
 }
 
 let picked = new Set();
